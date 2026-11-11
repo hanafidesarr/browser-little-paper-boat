@@ -1,6 +1,7 @@
 import * as pc from 'playcanvas';
-import { CatmullRomSpline, RiverSample, SplinePoint } from '../spline/CatmullRomSpline';
-import { RiverMeshBuilder, RiverMeshResult } from './RiverMeshBuilder';
+import { CatmullRomSpline } from '../spline/CatmullRomSpline';
+import { SplineControlPoint, RiverFrame } from '../spline/RiverFrame';
+import { RiverMeshBuilder, RiverMeshOptions, RiverMeshResult } from './RiverMeshBuilder';
 
 export class RiverSystem {
   private app: pc.AppBase;
@@ -15,21 +16,9 @@ export class RiverSystem {
     this.app.root.addChild(this.rootEntity);
   }
 
-  public initFromPoints(
-    points: SplinePoint[],
-    options?: {
-      waterMaterial?: pc.Material;
-      bankMaterial?: pc.Material;
-      stepSize?: number;
-      bankWidth?: number;
-      bankHeight?: number;
-    }
-  ): void {
-    // Clean up previous entities if any
+  public initFromPoints(points: SplineControlPoint[], options?: RiverMeshOptions): void {
     this.clear();
-
     this.spline.setPoints(points);
-
     this.riverResult = RiverMeshBuilder.buildRiver(this.app, this.spline, options);
     this.rootEntity.addChild(this.riverResult.waterEntity);
     this.rootEntity.addChild(this.riverResult.banksEntity);
@@ -43,29 +32,62 @@ export class RiverSystem {
     return this.spline.getTotalLength();
   }
 
-  public sampleAtDistance(distance: number): RiverSample {
+  // ==========================================
+  // REQUIRED RIVER COORDINATE SYSTEM METHODS
+  // ==========================================
+
+  public getPositionAtDistance(distance: number): pc.Vec3 {
+    return this.spline.sampleAtDistance(distance).position;
+  }
+
+  public getTangentAtDistance(distance: number): pc.Vec3 {
+    return this.spline.sampleAtDistance(distance).tangent;
+  }
+
+  public getNormalAtDistance(distance: number): pc.Vec3 {
+    return this.spline.sampleAtDistance(distance).normal;
+  }
+
+  public getWidthAtDistance(distance: number): number {
+    return this.spline.sampleAtDistance(distance).width;
+  }
+
+  public getFrameAtDistance(distance: number): RiverFrame {
     return this.spline.sampleAtDistance(distance);
   }
 
+  public sampleAtDistance(distance: number): RiverFrame {
+    return this.spline.sampleAtDistance(distance);
+  }
+
+  public getDistanceAtNormalizedProgress(progress: number): number {
+    const clamped = Math.max(0, Math.min(1, progress));
+    return clamped * this.spline.getTotalLength();
+  }
+
   /**
-   * Converts river coordinates (distance s, lateralOffset u, heightOffset h) into world position.
+   * Evaluates world position from river coordinates (distance s, lateralOffset u, heightOffset h).
    */
   public riverToWorld(distance: number, lateralOffset: number, heightOffset: number = 0): pc.Vec3 {
-    const sample = this.spline.sampleAtDistance(distance);
+    const frame = this.getFrameAtDistance(distance);
     return new pc.Vec3(
-      sample.position.x + sample.normal.x * lateralOffset + sample.up.x * heightOffset,
-      sample.position.y + sample.normal.y * lateralOffset + sample.up.y * heightOffset,
-      sample.position.z + sample.normal.z * lateralOffset + sample.up.z * heightOffset
+      frame.position.x + frame.normal.x * lateralOffset + frame.binormal.x * heightOffset,
+      frame.position.y + frame.normal.y * lateralOffset + frame.binormal.y * heightOffset,
+      frame.position.z + frame.normal.z * lateralOffset + frame.binormal.z * heightOffset
     );
   }
 
   /**
-   * Clamps a lateral offset within the navigable river bounds with a safety margin from banks.
+   * Clamps lateral offset safely inside river boundaries with margin.
    */
   public clampLateral(distance: number, lateralOffset: number, margin: number = 0.8): number {
-    const sample = this.spline.sampleAtDistance(distance);
-    const maxHalf = Math.max(0.2, (sample.width * 0.5) - margin);
+    const width = this.getWidthAtDistance(distance);
+    const maxHalf = Math.max(0.2, (width * 0.5) - margin);
     return Math.max(-maxHalf, Math.min(maxHalf, lateralOffset));
+  }
+
+  public getMeshResult(): RiverMeshResult | null {
+    return this.riverResult;
   }
 
   public clear(): void {

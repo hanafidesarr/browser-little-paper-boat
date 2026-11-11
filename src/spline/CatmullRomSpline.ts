@@ -1,30 +1,16 @@
 import * as pc from 'playcanvas';
+import { SplineControlPoint, RiverFrame } from './RiverFrame';
 
-export interface SplinePoint {
-  position: pc.Vec3;
-  width?: number;
-  current?: number;
-}
-
-export interface RiverSample {
-  distance: number;
-  position: pc.Vec3;
-  tangent: pc.Vec3;
-  normal: pc.Vec3; // Horizontal normal pointing to the right bank
-  up: pc.Vec3;
-  width: number;
-  current: number;
-  curvature: number;
-}
+export type SplinePoint = SplineControlPoint;
 
 export class CatmullRomSpline {
-  private points: SplinePoint[] = [];
+  private points: SplineControlPoint[] = [];
   private totalLength: number = 0;
   private distanceLookup: { distance: number; t: number; pointIndex: number }[] = [];
   private readonly defaultWidth: number;
   private readonly defaultCurrent: number;
 
-  constructor(points: SplinePoint[] = [], defaultWidth: number = 8.0, defaultCurrent: number = 5.0) {
+  constructor(points: SplineControlPoint[] = [], defaultWidth: number = 8.0, defaultCurrent: number = 5.0) {
     this.defaultWidth = defaultWidth;
     this.defaultCurrent = defaultCurrent;
     if (points.length >= 2) {
@@ -32,12 +18,11 @@ export class CatmullRomSpline {
     }
   }
 
-  public setPoints(points: SplinePoint[]): void {
+  public setPoints(points: SplineControlPoint[]): void {
     if (points.length < 2) {
-      throw new Error('Spline must have at least 2 control points');
+      throw new Error('Spline requires at least 2 control points');
     }
 
-    // Ensure all points have position clones and default widths/currents
     this.points = points.map(pt => ({
       position: pt.position.clone(),
       width: pt.width ?? this.defaultWidth,
@@ -51,17 +36,21 @@ export class CatmullRomSpline {
     return this.totalLength;
   }
 
-  public getControlPoints(): SplinePoint[] {
+  public getControlPoints(): SplineControlPoint[] {
     return this.points;
   }
 
   /**
-   * Samples river data at exact arc-length distance s (meters from start).
+   * Samples the river frame at exact arc-length distance s in meters.
    */
-  public sampleAtDistance(distance: number): RiverSample {
+  public sampleAtDistance(distance: number): RiverFrame {
+    if (this.totalLength <= 0 || this.distanceLookup.length < 2) {
+      return this.createFallbackFrame(distance);
+    }
+
     const clampedDist = Math.max(0, Math.min(this.totalLength, distance));
-    
-    // Binary search in distance lookup table
+
+    // Binary search for segment in distance table
     let low = 0;
     let high = this.distanceLookup.length - 1;
     while (low <= high) {
@@ -78,9 +67,8 @@ export class CatmullRomSpline {
     const entry1 = this.distanceLookup[idx + 1];
 
     const segmentDist = entry1.distance - entry0.distance;
-    const factor = segmentDist > 0.0001 ? (clampedDist - entry0.distance) / segmentDist : 0;
+    const factor = segmentDist > 0.00001 ? (clampedDist - entry0.distance) / segmentDist : 0;
 
-    // Interpolate segment pointIndex and t
     let t: number;
     let pIdx: number;
 
@@ -100,32 +88,38 @@ export class CatmullRomSpline {
     return this.sampleSegment(pIdx, t, clampedDist);
   }
 
-  private sampleSegment(pIdx: number, t: number, distance: number): RiverSample {
-    const numPoints = this.points.length;
+  public sampleAtProgress(progress: number): RiverFrame {
+    const clampedProgress = Math.max(0, Math.min(1, progress));
+    return this.sampleAtDistance(clampedProgress * this.totalLength);
+  }
+
+  private sampleSegment(pIdx: number, t: number, distance: number): RiverFrame {
+    const n = this.points.length;
     const p0 = this.points[Math.max(0, pIdx - 1)];
     const p1 = this.points[pIdx];
-    const p2 = this.points[Math.min(numPoints - 1, pIdx + 1)];
-    const p3 = this.points[Math.min(numPoints - 1, pIdx + 2)];
+    const p2 = this.points[Math.min(n - 1, pIdx + 1)];
+    const p3 = this.points[Math.min(n - 1, pIdx + 2)];
 
-    // Catmull-Rom Position evaluation
+    // Catmull-Rom Position
     const position = this.evaluateCatmullRomVec3(p0.position, p1.position, p2.position, p3.position, t);
 
-    // Tangent evaluation (first derivative)
+    // Tangent (first derivative)
     const tangent = this.evaluateCatmullRomTangent(p0.position, p1.position, p2.position, p3.position, t);
     tangent.normalize();
     if (tangent.lengthSq() < 0.0001) {
       tangent.set(0, 0, 1);
     }
 
-    // Up vector (world up roughly adjusted if needed)
-    const up = new pc.Vec3(0, 1, 0);
-
-    // Horizontal normal (right vector relative to forward river flow)
+    // Stable Horizontal Normal: N = Tangent x UP (points to right bank)
     const normal = new pc.Vec3();
-    normal.cross(up, tangent).normalize();
+    normal.cross(tangent, pc.Vec3.UP).normalize();
     if (normal.lengthSq() < 0.0001) {
       normal.set(1, 0, 0);
     }
+
+    // Binormal (stable perpendicular up vector)
+    const binormal = new pc.Vec3();
+    binormal.cross(normal, tangent).normalize();
 
     // Interpolate width and current
     const w0 = p1.width ?? this.defaultWidth;
@@ -136,19 +130,22 @@ export class CatmullRomSpline {
     const c1 = p2.current ?? this.defaultCurrent;
     const current = c0 + (c1 - c0) * t;
 
-    // Approximate curvature via delta tangent
+    // Curvature approximation via delta tangent
     const dt = 0.02;
-    const tNext = Math.min(1, t + dt);
+    const tNext = Math.min(1.0, t + dt);
     const tanNext = this.evaluateCatmullRomTangent(p0.position, p1.position, p2.position, p3.position, tNext).normalize();
-    const angleDelta = Math.acos(Math.max(-1, Math.min(1, tangent.dot(tanNext))));
-    const curvature = angleDelta / dt;
+    const dot = Math.max(-1, Math.min(1, tangent.dot(tanNext)));
+    const curvature = Math.acos(dot) / dt;
+
+    const progress = this.totalLength > 0 ? (distance / this.totalLength) : 0;
 
     return {
       distance,
+      progress,
       position,
       tangent,
       normal,
-      up,
+      binormal,
       width,
       current,
       curvature
@@ -159,7 +156,6 @@ export class CatmullRomSpline {
     const t2 = t * t;
     const t3 = t2 * t;
 
-    // Catmull-Rom spline formula (0.5 * [...])
     const x = 0.5 * (
       (2 * p1.x) +
       (-p0.x + p2.x) * t +
@@ -209,7 +205,7 @@ export class CatmullRomSpline {
     this.totalLength = 0;
 
     const numSegments = this.points.length - 1;
-    const samplesPerSegment = 20;
+    const samplesPerSegment = 25;
 
     let prevPos = this.points[0].position.clone();
     this.distanceLookup.push({ distance: 0, t: 0, pointIndex: 0 });
@@ -233,5 +229,19 @@ export class CatmullRomSpline {
         prevPos = pos;
       }
     }
+  }
+
+  private createFallbackFrame(distance: number): RiverFrame {
+    return {
+      distance,
+      progress: 0,
+      position: new pc.Vec3(0, 0, distance),
+      tangent: new pc.Vec3(0, 0, 1),
+      normal: new pc.Vec3(1, 0, 0),
+      binormal: new pc.Vec3(0, 1, 0),
+      width: this.defaultWidth,
+      current: this.defaultCurrent,
+      curvature: 0
+    };
   }
 }

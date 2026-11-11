@@ -1,29 +1,32 @@
 import * as pc from 'playcanvas';
-import { CatmullRomSpline, RiverSample } from '../spline/CatmullRomSpline';
+import { CatmullRomSpline } from '../spline/CatmullRomSpline';
+import { RiverFrame } from '../spline/RiverFrame';
 
 export interface RiverMeshResult {
   waterMesh: pc.Mesh;
   waterEntity: pc.Entity;
   banksMesh: pc.Mesh;
   banksEntity: pc.Entity;
-  samples: RiverSample[];
+  samples: RiverFrame[];
+}
+
+export interface RiverMeshOptions {
+  stepSize?: number;
+  crossSubdivisions?: number;
+  bankWidth?: number;
+  bankHeight?: number;
+  waterMaterial?: pc.Material;
+  bankMaterial?: pc.Material;
 }
 
 export class RiverMeshBuilder {
   /**
-   * Generates water surface and bank meshes from a CatmullRomSpline.
+   * Generates water surface and bank meshes from a CatmullRomSpline with guaranteed gapless seams.
    */
   public static buildRiver(
     app: pc.AppBase,
     spline: CatmullRomSpline,
-    options: {
-      stepSize?: number;
-      crossSubdivisions?: number;
-      bankWidth?: number;
-      bankHeight?: number;
-      waterMaterial?: pc.Material;
-      bankMaterial?: pc.Material;
-    } = {}
+    options: RiverMeshOptions = {}
   ): RiverMeshResult {
     const stepSize = options.stepSize ?? 1.5;
     const crossSubs = Math.max(2, options.crossSubdivisions ?? 4);
@@ -33,32 +36,29 @@ export class RiverMeshBuilder {
     const totalLength = spline.getTotalLength();
     const sampleCount = Math.max(4, Math.ceil(totalLength / stepSize) + 1);
 
-    // Pre-sample spline along length
-    const samples: RiverSample[] = [];
+    // 1. Sample spline uniformly along distance
+    const samples: RiverFrame[] = [];
     for (let i = 0; i < sampleCount; i++) {
       const dist = Math.min(totalLength, (i / (sampleCount - 1)) * totalLength);
       samples.push(spline.sampleAtDistance(dist));
     }
 
-    // 1. BUILD WATER MESH
+    // 2. Generate Water Mesh
     const waterMesh = this.createWaterMesh(app.graphicsDevice, samples, crossSubs);
 
-    // 2. BUILD RIVER BANKS & EMBANKMENTS
+    // 3. Generate Bank Embankment Mesh
     const banksMesh = this.createBanksMesh(app.graphicsDevice, samples, bankWidth, bankHeight);
 
-    // Entities
+    // Create Water Entity
     const waterEntity = new pc.Entity('RiverWater');
-    const waterModel = new pc.Model();
-    const waterNode = new pc.GraphNode();
-    const waterMeshInstance = new pc.MeshInstance(waterMesh, options.waterMaterial || new pc.StandardMaterial());
-    waterModel.graph = waterNode;
-    waterModel.meshInstances.push(waterMeshInstance);
+    const waterMeshInstance = new pc.MeshInstance(waterMesh, options.waterMaterial || this.createDefaultWaterMaterial());
     waterEntity.addComponent('render', {
       meshInstances: [waterMeshInstance]
     });
 
+    // Create Banks Entity
     const banksEntity = new pc.Entity('RiverBanks');
-    const banksMeshInstance = new pc.MeshInstance(banksMesh, options.bankMaterial || new pc.StandardMaterial());
+    const banksMeshInstance = new pc.MeshInstance(banksMesh, options.bankMaterial || this.createDefaultBankMaterial());
     banksEntity.addComponent('render', {
       meshInstances: [banksMeshInstance]
     });
@@ -74,7 +74,7 @@ export class RiverMeshBuilder {
 
   private static createWaterMesh(
     device: pc.GraphicsDevice,
-    samples: RiverSample[],
+    samples: RiverFrame[],
     crossSubs: number
   ): pc.Mesh {
     const numRows = samples.length;
@@ -90,17 +90,15 @@ export class RiverMeshBuilder {
 
     for (let r = 0; r < numRows; r++) {
       const sample = samples[r];
-      const halfWidth = sample.width * 0.5;
 
       for (let c = 0; c < numCols; c++) {
         const uRatio = c / crossSubs; // 0 to 1 across width
         const lateralOffset = (uRatio - 0.5) * sample.width;
 
-        // Position: RiverCenter + Normal * lateralOffset
         const px = sample.position.x + sample.normal.x * lateralOffset;
-        // Slightly cup water in the center for depth illusion
-        const cupDepth = Math.sin(uRatio * Math.PI) * -0.05;
-        const py = sample.position.y + cupDepth;
+        // Subtle natural cup in river center
+        const cup = Math.sin(uRatio * Math.PI) * -0.04;
+        const py = sample.position.y + cup;
         const pz = sample.position.z + sample.normal.z * lateralOffset;
 
         positions[vIdx * 3 + 0] = px;
@@ -111,36 +109,35 @@ export class RiverMeshBuilder {
         normals[vIdx * 3 + 1] = 1;
         normals[vIdx * 3 + 2] = 0;
 
-        // UVs: U = lateral (0 to 1), V = longitudinal distance in meters / tiling factor
+        // UV: U = lateral (0..1), V = longitudinal distance in meters / tiling factor (10m)
         uvs[uvIdx * 2 + 0] = uRatio;
-        uvs[uvIdx * 2 + 1] = sample.distance / 12.0;
+        uvs[uvIdx * 2 + 1] = sample.distance / 10.0;
 
         vIdx++;
         uvIdx++;
       }
     }
 
-    // Indices for quads
     const numQuads = (numRows - 1) * (numCols - 1);
     const indices = new Uint16Array(numQuads * 6);
     let idx = 0;
 
     for (let r = 0; r < numRows - 1; r++) {
       for (let c = 0; c < numCols - 1; c++) {
-        const topLeft = r * numCols + c;
-        const topRight = topLeft + 1;
-        const bottomLeft = (r + 1) * numCols + c;
-        const bottomRight = bottomLeft + 1;
+        const tl = r * numCols + c;
+        const tr = tl + 1;
+        const bl = (r + 1) * numCols + c;
+        const br = bl + 1;
 
-        // Triangle 1
-        indices[idx++] = topLeft;
-        indices[idx++] = bottomLeft;
-        indices[idx++] = topRight;
+        // Triangle 1: CCW (tl, bl, tr)
+        indices[idx++] = tl;
+        indices[idx++] = bl;
+        indices[idx++] = tr;
 
-        // Triangle 2
-        indices[idx++] = topRight;
-        indices[idx++] = bottomLeft;
-        indices[idx++] = bottomRight;
+        // Triangle 2: CCW (tr, bl, br)
+        indices[idx++] = tr;
+        indices[idx++] = bl;
+        indices[idx++] = br;
       }
     }
 
@@ -156,25 +153,24 @@ export class RiverMeshBuilder {
 
   private static createBanksMesh(
     device: pc.GraphicsDevice,
-    samples: RiverSample[],
+    samples: RiverFrame[],
     bankWidth: number,
     bankHeight: number
   ): pc.Mesh {
-    // Each cross-section has:
-    // Left outer edge (-bankWidth), Left bank crest, Left water edge,
-    // Right water edge, Right bank crest, Right outer edge (+bankWidth)
-    // 6 profile points per slice
-    const profileOffsets = [
-      { lateral: -1.0, height: 1.2, uvX: 0.0 }, // Outer terrain skirt left
-      { lateral: -0.65, height: 0.9, uvX: 0.2 }, // Mid slope left
-      { lateral: -0.5, height: 0.25, uvX: 0.45 }, // Water edge bank left (mossy)
-      { lateral: 0.5, height: 0.25, uvX: 0.55 }, // Water edge bank right (mossy)
-      { lateral: 0.65, height: 0.9, uvX: 0.8 }, // Mid slope right
-      { lateral: 1.0, height: 1.2, uvX: 1.0 }   // Outer terrain skirt right
+    // Bank Profile: Left and right banks meet exactly at water boundary
+    // Left Bank: Outer skirt -> Mid slope -> Shore edge (meets water)
+    // Right Bank: Shore edge (meets water) -> Mid slope -> Outer skirt
+    const profile = [
+      { side: -1, extraLateral: bankWidth, heightFactor: 1.0, uvX: 0.0 }, // Left outer skirt
+      { side: -1, extraLateral: bankWidth * 0.35, heightFactor: 0.65, uvX: 0.25 }, // Left mid slope
+      { side: -1, extraLateral: 0.0, heightFactor: 0.0, uvX: 0.5 }, // Left shoreline (exact water edge)
+      { side: 1, extraLateral: 0.0, heightFactor: 0.0, uvX: 0.5 }, // Right shoreline (exact water edge)
+      { side: 1, extraLateral: bankWidth * 0.35, heightFactor: 0.65, uvX: 0.75 }, // Right mid slope
+      { side: 1, extraLateral: bankWidth, heightFactor: 1.0, uvX: 1.0 }  // Right outer skirt
     ];
 
     const numRows = samples.length;
-    const numCols = profileOffsets.length;
+    const numCols = profile.length;
     const numVertices = numRows * numCols;
 
     const positions = new Float32Array(numVertices * 3);
@@ -189,46 +185,34 @@ export class RiverMeshBuilder {
       const halfW = sample.width * 0.5;
 
       for (let c = 0; c < numCols; c++) {
-        const prof = profileOffsets[c];
-        let latDist: number;
+        const p = profile[c];
+        const lat = p.side * (halfW + p.extraLateral);
 
-        if (prof.lateral < 0) {
-          // Left bank
-          const extra = (Math.abs(prof.lateral) - 0.5) * bankWidth * 2;
-          latDist = -halfW - extra;
-        } else {
-          // Right bank
-          const extra = (prof.lateral - 0.5) * bankWidth * 2;
-          latDist = halfW + extra;
-        }
-
-        const px = sample.position.x + sample.normal.x * latDist;
-        const py = sample.position.y + prof.height * bankHeight;
-        const pz = sample.position.z + sample.normal.z * latDist;
+        const px = sample.position.x + sample.normal.x * lat;
+        const py = sample.position.y + p.heightFactor * bankHeight;
+        const pz = sample.position.z + sample.normal.z * lat;
 
         positions[vIdx * 3 + 0] = px;
         positions[vIdx * 3 + 1] = py;
         positions[vIdx * 3 + 2] = pz;
 
-        // Normal estimation roughly up and outward
-        const sideDir = prof.lateral < 0 ? -1 : 1;
-        normals[vIdx * 3 + 0] = sample.normal.x * sideDir * 0.4;
-        normals[vIdx * 3 + 1] = 0.9;
-        normals[vIdx * 3 + 2] = sample.normal.z * sideDir * 0.4;
+        // Normal: outward horizontal + upward
+        normals[vIdx * 3 + 0] = sample.normal.x * p.side * 0.45;
+        normals[vIdx * 3 + 1] = 0.89;
+        normals[vIdx * 3 + 2] = sample.normal.z * p.side * 0.45;
 
-        uvs[uvIdx * 2 + 0] = prof.uvX * 4.0;
-        uvs[uvIdx * 2 + 1] = sample.distance / 10.0;
+        uvs[uvIdx * 2 + 0] = p.uvX * 3.0;
+        uvs[uvIdx * 2 + 1] = sample.distance / 12.0;
 
         vIdx++;
         uvIdx++;
       }
     }
 
-    // Indices for banks (split: cols 0-2 left bank, cols 3-5 right bank; skip center 2-3 where water is)
     const indicesList: number[] = [];
 
     for (let r = 0; r < numRows - 1; r++) {
-      // Left bank (cols 0, 1, 2)
+      // Left Bank quads (columns 0->1 and 1->2)
       for (let c = 0; c < 2; c++) {
         const tl = r * numCols + c;
         const tr = tl + 1;
@@ -239,7 +223,7 @@ export class RiverMeshBuilder {
         indicesList.push(tr, bl, br);
       }
 
-      // Right bank (cols 3, 4, 5)
+      // Right Bank quads (columns 3->4 and 4->5)
       for (let c = 3; c < 5; c++) {
         const tl = r * numCols + c;
         const tr = tl + 1;
@@ -261,5 +245,25 @@ export class RiverMeshBuilder {
     mesh.update(pc.PRIMITIVE_TRIANGLES);
 
     return mesh;
+  }
+
+  private static createDefaultWaterMaterial(): pc.StandardMaterial {
+    const mat = new pc.StandardMaterial();
+    mat.diffuse = new pc.Color(0.24, 0.65, 0.78);
+    mat.ambient = new pc.Color(0.18, 0.48, 0.58);
+    mat.shininess = 64;
+    mat.opacity = 0.88;
+    mat.blendType = pc.BLEND_NORMAL;
+    mat.cull = pc.CULLFACE_NONE;
+    mat.update();
+    return mat;
+  }
+
+  private static createDefaultBankMaterial(): pc.StandardMaterial {
+    const mat = new pc.StandardMaterial();
+    mat.diffuse = new pc.Color(0.35, 0.58, 0.32);
+    mat.ambient = new pc.Color(0.24, 0.40, 0.22);
+    mat.update();
+    return mat;
   }
 }

@@ -10,6 +10,7 @@ export interface PlayerData {
   musicVolume: number;
   ambientVolume: number;
   sfxVolume: number;
+  tutorialSeen: boolean;
 }
 
 export class ProgressionManager {
@@ -42,8 +43,23 @@ export class ProgressionManager {
       },
       musicVolume: 0.6,
       ambientVolume: 0.7,
-      sfxVolume: 0.8
+      sfxVolume: 0.8,
+      tutorialSeen: false
     };
+    this.save();
+  }
+
+  public static hasSeenTutorial(): boolean {
+    return !!this.data.tutorialSeen;
+  }
+
+  public static markTutorialSeen(): void {
+    this.data.tutorialSeen = true;
+    this.save();
+  }
+
+  public static resetTutorial(): void {
+    this.data.tutorialSeen = false;
     this.save();
   }
 

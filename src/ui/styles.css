@@ -300,18 +300,36 @@
   color: #f59e0b;
 }
 
-/* Modals */
-.modal-overlay {
+/* Single Centralized Modal Layer */
+.modal-layer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(30, 50, 40, 0.45);
+  background: rgba(30, 50, 40, 0.48);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 20;
+  z-index: 50;
+  pointer-events: auto;
+  transition: opacity 0.25s ease;
+}
+
+.modal-layer.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none !important;
+}
+
+.modal-card {
+  transition: transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+.modal-card.hidden {
+  display: none !important;
 }
 
 .slider-group {

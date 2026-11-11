@@ -11,7 +11,7 @@ import { EffectManager } from '../particles/EffectManager';
 import { LevelManager } from '../levels/LevelManager';
 import { ProgressionManager } from '../progression/ProgressionManager';
 import { AudioManager } from '../audio/AudioManager';
-import { UIManager, GameState } from '../ui/UIManager';
+import { UIManager, GameState, ModalType } from '../ui/UIManager';
 
 export class Game {
   private app: pc.AppBase;
@@ -36,7 +36,7 @@ export class Game {
   constructor() {
     ProgressionManager.init();
 
-    // 1. Initialize PlayCanvas App
+    // 1. Initialize PlayCanvas Application
     const canvas = document.getElementById('application-canvas') as HTMLCanvasElement;
     this.app = new pc.Application(canvas, {
       mouse: new pc.Mouse(canvas),
@@ -100,10 +100,14 @@ export class Game {
     this.ui = new UIManager(this.audio);
 
     this.setupInteractions();
+    this.bindGlobalKeyboard();
     this.startLoop();
 
-    // Load Level 1 into background for serene main menu view
+    // Load Level 1 into background for peaceful main menu scene
     this.levelManager.loadLevel(1);
+    this.state = 'MAIN_MENU';
+    this.boat.setMovementEnabled(false);
+    this.boat.setJoystickVisible(false);
     this.ui.showMainMenu();
   }
 
@@ -120,11 +124,10 @@ export class Game {
 
     // Boat sank (integrity depleted)
     this.boat.onBoatSink = () => {
-      this.ui.showCheckpointBanner('Origami unfolding... Restoring at lantern 🏮');
-      setTimeout(() => {
-        this.checkpoints.respawnBoatAtLastCheckpoint();
-        this.camera.reset();
-      }, 900);
+      this.state = 'GAME_OVER';
+      this.boat.setMovementEnabled(false);
+      this.boat.setJoystickVisible(false);
+      this.ui.showGameOverModal();
     };
 
     // Checkpoint crossed
@@ -134,7 +137,10 @@ export class Game {
 
     // Level finished
     this.levelManager.onLevelFinish = (levelId, collected, total) => {
-      this.state = 'RESULT';
+      this.state = 'LEVEL_COMPLETE';
+      this.boat.setMovementEnabled(false);
+      this.boat.setJoystickVisible(false);
+
       const { stars } = ProgressionManager.completeLevel(levelId, collected, total);
       this.audio.playWinFanfare();
       const hasNext = levelId < 10;
@@ -146,27 +152,89 @@ export class Game {
       this.startLevel(levelId);
     };
 
+    this.ui.onTutorialUnderstood = () => {
+      this.state = 'PLAYING';
+      this.boat.setMovementEnabled(true);
+      this.boat.setJoystickVisible(true);
+    };
+
     this.ui.onRestartLevel = () => {
       this.startLevel(this.levelManager.getCurrentLevelId());
     };
 
     this.ui.onResumeGame = () => {
       this.state = 'PLAYING';
+      this.boat.setMovementEnabled(true);
+      this.boat.setJoystickVisible(true);
     };
 
     this.ui.onExitToLevelSelect = () => {
-      this.state = 'LEVEL_SELECT';
-      this.ui.showLevelSelect();
+      this.state = 'LEVEL_SELECTION';
+      this.boat.setMovementEnabled(false);
+      this.boat.setJoystickVisible(false);
+      this.ui.showLevelSelection(false);
+    };
+
+    this.ui.onOpenLevelSelect = () => {
+      this.state = 'LEVEL_SELECTION';
+      this.boat.setMovementEnabled(false);
+      this.boat.setJoystickVisible(false);
+    };
+
+    this.ui.onBackToMenu = () => {
+      this.state = 'MAIN_MENU';
+      this.boat.setMovementEnabled(false);
+      this.boat.setJoystickVisible(false);
     };
 
     this.ui.onNextLevel = () => {
       const nextId = this.levelManager.getCurrentLevelId() + 1;
       this.startLevel(nextId <= 10 ? nextId : 1);
     };
+
+    this.ui.onGameOverRespawn = () => {
+      this.state = 'PLAYING';
+      this.checkpoints.respawnBoatAtLastCheckpoint();
+      this.camera.reset();
+      this.boat.setMovementEnabled(true);
+      this.boat.setJoystickVisible(true);
+    };
+
+    this.ui.onModalStateChange = (modal: ModalType, isOpen: boolean) => {
+      if (isOpen) {
+        this.boat.setJoystickVisible(false);
+        this.boat.setMovementEnabled(false);
+      } else {
+        if (this.state === 'PLAYING') {
+          this.boat.setMovementEnabled(true);
+          this.boat.setJoystickVisible(true);
+        } else {
+          this.boat.setJoystickVisible(false);
+        }
+      }
+    };
+  }
+
+  private bindGlobalKeyboard(): void {
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyP' || e.code === 'Escape') {
+        if (this.state === 'PLAYING') {
+          this.state = 'PAUSED';
+          this.boat.setMovementEnabled(false);
+          this.boat.setJoystickVisible(false);
+          this.ui.openModal('PAUSE', 'PLAYING');
+        } else if (this.state === 'PAUSED' && this.ui.getActiveModal() === 'PAUSE') {
+          this.ui.closeModal();
+          this.state = 'PLAYING';
+          this.boat.setMovementEnabled(true);
+          this.boat.setJoystickVisible(true);
+        }
+      }
+    });
   }
 
   public startLevel(levelId: number): void {
-    this.state = 'PLAYING';
+    // 1. Initialize level geometry, river spline, obstacles, collectibles
     this.levelManager.loadLevel(levelId);
     this.camera.reset();
 
@@ -177,10 +245,36 @@ export class Game {
       cfg.collectibles.length
     );
     this.ui.updateIntegrity(this.boat.maxIntegrity, this.boat.maxIntegrity);
+
+    // 2. First-time tutorial check: only show if player hasn't seen it yet
+    if (!ProgressionManager.hasSeenTutorial()) {
+      this.state = 'TUTORIAL';
+      this.boat.setMovementEnabled(false);
+      this.boat.setJoystickVisible(false);
+      this.ui.openModal('TUTORIAL', 'PLAYING');
+    } else {
+      this.state = 'PLAYING';
+      this.boat.setMovementEnabled(true);
+      this.boat.setJoystickVisible(true);
+    }
   }
 
   public getUIManager(): UIManager {
     return this.ui;
+  }
+
+  public completeLevel(levelId: number, collected: number, total: number): void {
+    if (this.levelManager.onLevelFinish) {
+      this.levelManager.onLevelFinish(levelId, collected, total);
+    }
+  }
+
+  public getState(): GameState {
+    return this.state;
+  }
+
+  public getBoat(): BoatController {
+    return this.boat;
   }
 
   private startLoop(): void {
@@ -200,12 +294,22 @@ export class Game {
         const total = this.river.getTotalLength();
         const cur = this.boat.getDistance();
         this.ui.updateProgress(total > 0 ? (cur / total) : 0);
-      } else if (this.state === 'MAIN_MENU' || this.state === 'LEVEL_SELECT') {
+      } else if (
+        this.state === 'TUTORIAL' ||
+        this.state === 'PAUSED' ||
+        this.state === 'LEVEL_COMPLETE' ||
+        this.state === 'GAME_OVER'
+      ) {
+        // Paused in-game modal states: boat does not advance forward
+        this.boat.update(0);
+        this.environment.update(dt * 0.1);
+        this.effects.update(dt * 0.15);
+      } else if (this.state === 'MAIN_MENU' || this.state === 'LEVEL_SELECTION') {
         // Slow peaceful camera panning in menu
-        this.camera.update(dt * 0.4);
-        this.environment.update(dt);
-        this.effects.update(dt);
-        this.levelManager.update(dt * 0.4);
+        this.camera.update(dt * 0.35);
+        this.environment.update(dt * 0.35);
+        this.effects.update(dt * 0.35);
+        this.levelManager.update(dt * 0.35);
       }
     });
   }

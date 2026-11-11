@@ -33,6 +33,7 @@ export class BoatController {
   private currentIntegrity: number = 3;
   private invulnerabilityTimer: number = 0;
   private isSunk: boolean = false;
+  private movementEnabled: boolean = false;
 
   // Animation Timing
   private animTimer: number = 0;
@@ -168,15 +169,31 @@ export class BoatController {
 
   private initVirtualJoystick(): void {
     this.virtualJoystick = new VirtualJoystick();
+    this.virtualJoystick.setVisible(false); // Initially hidden until gameplay starts
     this.virtualJoystick.onAxisChange = (axis: number) => {
       this.inputState.joystickAxis = axis;
     };
+  }
+
+  public setMovementEnabled(enabled: boolean): void {
+    this.movementEnabled = enabled;
+    if (!enabled) {
+      this.lateralVelocity = 0;
+      this.inputState.keyboardAxis = 0;
+      this.inputState.mouseDragAxis = 0;
+      this.inputState.joystickAxis = 0;
+    }
+  }
+
+  public isMovementEnabled(): boolean {
+    return this.movementEnabled;
   }
 
   /**
    * Evaluates combined steer axis from all inputs (-1 to +1).
    */
   public getEffectiveSteerAxis(): number {
+    if (!this.movementEnabled) return 0;
     let axis = this.inputState.keyboardAxis;
     if (Math.abs(this.inputState.joystickAxis) > 0.05) {
       axis = this.inputState.joystickAxis;
@@ -225,6 +242,14 @@ export class BoatController {
 
     if (Math.abs(this.externalSpinTorque) > 0.01) {
       this.externalSpinTorque -= this.externalSpinTorque * 3.0 * dt;
+    }
+
+    if (!this.movementEnabled) {
+      // Gentle floating bob & rocking while waiting in menu or tutorial
+      this.currentForwardSpeed = 0;
+      this.lateralVelocity = 0;
+      this.updateTransform(dt);
+      return;
     }
 
     // 1. Spline sample at current distance

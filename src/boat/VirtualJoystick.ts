@@ -8,82 +8,74 @@ export class VirtualJoystick {
   private knobEl: HTMLElement;
   private container: HTMLElement;
   private isPointerDown: boolean = false;
+  private activePointerId: number = -1;
   private startX: number = 0;
-  private currentX: number = 0;
-  private readonly maxRadius: number = 45;
+  private startY: number = 0;
+  private readonly maxRadius: number = 42;
   private currentAxis: number = 0;
+  private isVisible: boolean = false;
 
   public onAxisChange: ((axis: number) => void) | null = null;
 
   constructor() {
     this.container = document.createElement('div');
     this.container.id = 'virtual-joystick-container';
-    this.container.style.cssText = `
-      position: absolute;
-      bottom: 30px;
-      left: 35px;
-      width: 100px;
-      height: 100px;
-      z-index: 25;
-      pointer-events: auto;
-      touch-action: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
+    this.container.className = 'virtual-joystick-wrap';
 
     this.baseEl = document.createElement('div');
-    this.baseEl.style.cssText = `
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.35);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 2px solid rgba(255, 255, 255, 0.7);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    `;
+    this.baseEl.className = 'joystick-base';
 
     this.knobEl = document.createElement('div');
-    this.knobEl.style.cssText = `
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: #2d7a46;
-      border: 2px solid #ffffff;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-      position: absolute;
-      transition: transform 0.05s ease-out;
-      pointer-events: none;
-    `;
+    this.knobEl.className = 'joystick-knob';
 
     this.baseEl.appendChild(this.knobEl);
     this.container.appendChild(this.baseEl);
     document.body.appendChild(this.container);
 
+    this.updatePosition();
     this.bindEvents();
+
+    window.addEventListener('resize', () => this.updatePosition());
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => this.updatePosition(), 100);
+    });
+  }
+
+  /**
+   * Responsively positions joystick:
+   * - Portrait: Centered horizontally at bottom (`left: 50%; transform: translateX(-50%);`)
+   * - Landscape: Pinned to bottom-left with safe-area spacing
+   */
+  public updatePosition(): void {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    if (isPortrait) {
+      this.container.classList.add('portrait-mode');
+      this.container.classList.remove('landscape-mode');
+    } else {
+      this.container.classList.add('landscape-mode');
+      this.container.classList.remove('portrait-mode');
+    }
   }
 
   private bindEvents(): void {
-    const handleStart = (clientX: number) => {
+    const handleStart = (clientX: number, clientY: number, pointerId: number) => {
       this.isPointerDown = true;
+      this.activePointerId = pointerId;
       const rect = this.baseEl.getBoundingClientRect();
       this.startX = rect.left + rect.width / 2;
-      this.updateKnob(clientX);
+      this.startY = rect.top + rect.height / 2;
+      this.updateKnob(clientX, clientY);
     };
 
-    const handleMove = (clientX: number) => {
+    const handleMove = (clientX: number, clientY: number) => {
       if (!this.isPointerDown) return;
-      this.updateKnob(clientX);
+      this.updateKnob(clientX, clientY);
     };
 
     const handleEnd = () => {
       if (!this.isPointerDown) return;
       this.isPointerDown = false;
+      this.activePointerId = -1;
       this.currentAxis = 0;
       this.knobEl.style.transform = `translate(0px, 0px)`;
       if (this.onAxisChange) {
@@ -91,28 +83,67 @@ export class VirtualJoystick {
       }
     };
 
-    // Pointer events
-    this.container.addEventListener('pointerdown', (e) => {
+    // Pointer events with pointer capture
+    this.baseEl.addEventListener('pointerdown', (e: PointerEvent) => {
       e.stopPropagation();
-      handleStart(e.clientX);
+      try {
+        this.baseEl.setPointerCapture(e.pointerId);
+      } catch (err) {
+        // Safe fallback
+      }
+      handleStart(e.clientX, e.clientY, e.pointerId);
     });
 
-    window.addEventListener('pointermove', (e) => {
-      if (this.isPointerDown) {
-        handleMove(e.clientX);
+    this.baseEl.addEventListener('pointermove', (e: PointerEvent) => {
+      if (!this.isPointerDown || e.pointerId !== this.activePointerId) return;
+      e.stopPropagation();
+      handleMove(e.clientX, e.clientY);
+    });
+
+    this.baseEl.addEventListener('pointerup', (e: PointerEvent) => {
+      if (e.pointerId === this.activePointerId) {
+        try {
+          this.baseEl.releasePointerCapture(e.pointerId);
+        } catch (err) {
+          // Safe fallback
+        }
+        handleEnd();
       }
     });
 
-    window.addEventListener('pointerup', () => handleEnd());
-    window.addEventListener('pointercancel', () => handleEnd());
+    this.baseEl.addEventListener('pointercancel', (e: PointerEvent) => {
+      if (e.pointerId === this.activePointerId) {
+        handleEnd();
+      }
+    });
+
+    // Window safety fallback
+    window.addEventListener('pointerup', (e: PointerEvent) => {
+      if (e.pointerId === this.activePointerId) {
+        handleEnd();
+      }
+    });
   }
 
-  private updateKnob(clientX: number): void {
-    const deltaX = clientX - this.startX;
-    const clampedX = Math.max(-this.maxRadius, Math.min(this.maxRadius, deltaX));
-    this.knobEl.style.transform = `translate(${clampedX}px, 0px)`;
+  private updateKnob(clientX: number, clientY: number): void {
+    let dx = clientX - this.startX;
+    let dy = clientY - this.startY;
 
-    this.currentAxis = clampedX / this.maxRadius;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > this.maxRadius) {
+      dx = (dx / dist) * this.maxRadius;
+      dy = (dy / dist) * this.maxRadius;
+    }
+
+    // Clamp horizontal axis -1 to +1 with smooth deadzone
+    let normX = dx / this.maxRadius;
+    if (Math.abs(normX) < 0.05) {
+      normX = 0;
+    }
+
+    this.currentAxis = Math.max(-1.0, Math.min(1.0, normX));
+    this.knobEl.style.transform = `translate(${dx}px, ${dy * 0.35}px)`;
+
     if (this.onAxisChange) {
       this.onAxisChange(this.currentAxis);
     }
@@ -122,12 +153,23 @@ export class VirtualJoystick {
     return this.currentAxis;
   }
 
-  public isTouching(): boolean {
-    return this.isPointerDown;
+  public setVisible(visible: boolean): void {
+    this.isVisible = visible;
+    this.container.style.display = visible ? 'flex' : 'none';
+    if (!visible) {
+      this.currentAxis = 0;
+      this.isPointerDown = false;
+      this.knobEl.style.transform = `translate(0px, 0px)`;
+      if (this.onAxisChange) {
+        this.onAxisChange(0);
+      }
+    } else {
+      this.updatePosition();
+    }
   }
 
-  public setVisible(visible: boolean): void {
-    this.container.style.display = visible ? 'flex' : 'none';
+  public isJoystickVisible(): boolean {
+    return this.isVisible;
   }
 
   public destroy(): void {

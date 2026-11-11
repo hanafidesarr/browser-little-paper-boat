@@ -384,10 +384,10 @@ export class ObstacleEntity {
 
         if (phase < 0.05 && this.fishJumpPhase !== 1) {
           this.fishJumpPhase = 1;
-          effects.spawnSplash(targetPos, 1.4);
+          effects.spawnFishSplash(targetPos, 1.4);
         } else if (phase > 0.95 && this.fishJumpPhase === 1) {
           this.fishJumpPhase = 2;
-          effects.spawnSplash(targetPos, 1.6);
+          effects.spawnFishSplash(targetPos, 1.6);
         }
       } else {
         this.fishJumpPhase = 0;
@@ -398,6 +398,9 @@ export class ObstacleEntity {
 
     } else if (this.type === 'whirlpool') {
       this.entity.rotate(0, 160 * dt, 0);
+      if (Math.random() < 0.12) {
+        effects.spawnCurrentBubble(this.entity.getPosition());
+      }
 
     } else if (this.type === 'branch' || this.type === 'log') {
       // Gentle floating rocking

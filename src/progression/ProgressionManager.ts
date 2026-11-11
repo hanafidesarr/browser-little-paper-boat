@@ -1,3 +1,5 @@
+export type GraphicsQuality = 'performance' | 'balanced' | 'quality';
+
 export interface LevelRecord {
   unlocked: boolean;
   completed: boolean;
@@ -12,6 +14,7 @@ export interface PlayerData {
   ambientVolume: number;
   sfxVolume: number;
   tutorialSeen: boolean;
+  graphicsQuality?: GraphicsQuality;
 }
 
 export class ProgressionManager {
@@ -32,6 +35,15 @@ export class ProgressionManager {
 
     if (this.data.masterVolume === undefined) {
       this.data.masterVolume = 0.8;
+    }
+
+    if (!this.data.graphicsQuality) {
+      const isMobile = typeof window !== 'undefined' && (
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        ('ontouchstart' in window) ||
+        window.innerWidth <= 1024
+      );
+      this.data.graphicsQuality = isMobile ? 'performance' : 'balanced';
     }
 
     // Ensure Level 1 is always unlocked
@@ -136,6 +148,15 @@ export class ProgressionManager {
     this.data.musicVolume = music;
     this.data.ambientVolume = ambient;
     this.data.sfxVolume = sfx;
+    this.save();
+  }
+
+  public static getGraphicsQuality(): GraphicsQuality {
+    return this.data.graphicsQuality || 'balanced';
+  }
+
+  public static setGraphicsQuality(quality: GraphicsQuality): void {
+    this.data.graphicsQuality = quality;
     this.save();
   }
 

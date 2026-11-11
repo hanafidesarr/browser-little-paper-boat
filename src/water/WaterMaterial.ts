@@ -6,7 +6,8 @@ export class WaterMaterial {
   private static foamTexture: pc.Texture | null = null;
 
   /**
-   * Generates a stylized hand-painted caustics & water ripple texture.
+   * Generates a stylized, high-aesthetic clear river caustics & aquatic gradient texture.
+   * Multi-frequency Voronoi-like web cells with soft turquoise-to-cerulean depth gradient.
    */
   public static getCausticTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.waterTexture) return this.waterTexture;
@@ -17,45 +18,55 @@ export class WaterMaterial {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Aquatic gradient (cerulean to deep turquoise)
+    // 1. Natural aquatic depth gradient (deep river turquoise to luminous aquamarine)
     const bgGrad = ctx.createLinearGradient(0, 0, size, size);
-    bgGrad.addColorStop(0.0, '#2e96b8');
-    bgGrad.addColorStop(0.4, '#38a9c5');
-    bgGrad.addColorStop(0.7, '#2482a6');
-    bgGrad.addColorStop(1.0, '#1c7293');
+    bgGrad.addColorStop(0.0, '#1c728d'); // Deep river cerulean
+    bgGrad.addColorStop(0.35, '#2691ab'); // Clear flowing turquoise
+    bgGrad.addColorStop(0.70, '#31adc4'); // Luminous sunlit aquamarine
+    bgGrad.addColorStop(1.0, '#2285a0'); // Gentle river green-blue
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Soft watercolor caustic cells
-    ctx.lineWidth = 6;
+    // 2. Organic layered caustics (sunlight refractions through river surface)
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    for (let pass = 0; pass < 2; pass++) {
-      ctx.strokeStyle = pass === 0 ? 'rgba(255, 255, 255, 0.35)' : 'rgba(220, 248, 255, 0.55)';
-      ctx.lineWidth = pass === 0 ? 8 : 4;
+    // Primary broad caustic bands
+    ctx.strokeStyle = 'rgba(235, 252, 255, 0.45)';
+    ctx.lineWidth = 7;
+    for (let i = 0; i < 48; i++) {
+      const cx = (i * 47) % size;
+      const cy = (i * 73) % size;
+      const r = 26 + ((i * 23) % 42);
 
-      for (let i = 0; i < 40; i++) {
-        const cx = (i * 37) % size;
-        const cy = (i * 61) % size;
-        const r = 24 + ((i * 19) % 36);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0.1, Math.PI * 1.55);
+      ctx.stroke();
 
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0.2, Math.PI * 1.6);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(cx + r * 0.7, cy + r * 0.5, r * 0.85, Math.PI * 0.6, Math.PI * 2.1);
-        ctx.stroke();
-      }
+      ctx.beginPath();
+      ctx.arc(cx + r * 0.65, cy + r * 0.45, r * 0.8, Math.PI * 0.5, Math.PI * 1.95);
+      ctx.stroke();
     }
 
-    // 3. Gentle sparkling caustic highlights
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    for (let j = 0; j < 60; j++) {
-      const px = (j * 71) % size;
-      const py = (j * 43) % size;
-      const pr = 3 + (j % 5);
+    // Secondary fine crisp caustic webs
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = 3.5;
+    for (let i = 0; i < 64; i++) {
+      const cx = (i * 61 + 31) % size;
+      const cy = (i * 37 + 19) % size;
+      const r = 16 + ((i * 17) % 30);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0.3, Math.PI * 1.7);
+      ctx.stroke();
+    }
+
+    // 3. Sunlight sparkling glints (small diamond specks catching afternoon sun)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    for (let j = 0; j < 80; j++) {
+      const px = (j * 89) % size;
+      const py = (j * 53) % size;
+      const pr = 2.5 + (j % 4);
       ctx.beginPath();
       ctx.arc(px, py, pr, 0, Math.PI * 2);
       ctx.fill();
@@ -78,7 +89,8 @@ export class WaterMaterial {
   }
 
   /**
-   * Generates a procedural water normal map for gentle surface ripple highlights.
+   * Generates an organic multi-octave normal map for flowing river surface ripples.
+   * Combines broad swells, diagonal river flow, and delicate micro-ripples.
    */
   public static getRippleNormalTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.rippleNormalTexture) return this.rippleNormalTexture;
@@ -94,15 +106,27 @@ export class WaterMaterial {
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const idx = (y * size + x) * 4;
-        const u = (x / size) * Math.PI * 8;
-        const v = (y / size) * Math.PI * 8;
+        const u = (x / size) * Math.PI * 2;
+        const v = (y / size) * Math.PI * 2;
 
-        // Wave normal calculation
-        const nx = Math.sin(u) * 0.25;
-        const ny = Math.cos(v) * 0.25;
+        // Multi-frequency wave normal synthesis (3 octaves)
+        // Octave 1: Longitudinal river flow swell
+        const dX1 = Math.sin(u * 4.0 + v * 2.0) * 0.35;
+        const dY1 = Math.cos(v * 4.0 - u * 1.5) * 0.35;
+
+        // Octave 2: Diagonal crossing wake wave
+        const dX2 = Math.cos(u * 7.0 - v * 5.0) * 0.20;
+        const dY2 = Math.sin(u * 5.0 + v * 6.0) * 0.20;
+
+        // Octave 3: Delicate micro-ripple shimmer
+        const dX3 = Math.sin(u * 12.0 + v * 10.0) * 0.10;
+        const dY3 = Math.cos(u * 10.0 - v * 12.0) * 0.10;
+
+        const nx = dX1 + dX2 + dX3;
+        const ny = dY1 + dY2 + dY3;
         const nz = 1.0;
 
-        // Normalize
+        // Normalize vector into [0, 255] RGB normal map space
         const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
         data[idx + 0] = Math.floor(((nx / len) * 0.5 + 0.5) * 255);
         data[idx + 1] = Math.floor(((ny / len) * 0.5 + 0.5) * 255);
@@ -130,7 +154,7 @@ export class WaterMaterial {
   }
 
   /**
-   * Generates a soft shoreline foam texture for water edges.
+   * Generates a soft shoreline foam texture for water edges and rock boundaries.
    */
   public static getFoamTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.foamTexture) return this.foamTexture;
@@ -141,26 +165,25 @@ export class WaterMaterial {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // Transparent background
     ctx.clearRect(0, 0, size, size);
 
-    // Soft bubbly foam texture
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-    for (let i = 0; i < 90; i++) {
-      const cx = (i * 23) % size;
-      const cy = (i * 37) % size;
-      const r = 4 + (i % 12);
+    // Soft bubbly foam cluster
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.80)';
+    for (let i = 0; i < 95; i++) {
+      const cx = (i * 29) % size;
+      const cy = (i * 41) % size;
+      const r = 4 + (i % 14);
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Connective foam lace
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.lineWidth = 3;
-    for (let j = 0; j < 30; j++) {
+    // Connective foam lace webs
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.48)';
+    ctx.lineWidth = 3.5;
+    for (let j = 0; j < 36; j++) {
       ctx.beginPath();
-      ctx.arc((j * 31) % size, (j * 47) % size, 18, 0, Math.PI * 1.5);
+      ctx.arc((j * 37) % size, (j * 43) % size, 20, 0, Math.PI * 1.6);
       ctx.stroke();
     }
 
@@ -180,11 +203,12 @@ export class WaterMaterial {
   }
 
   /**
-   * Creates the stylized water material with dual-layer animated flow.
+   * Creates the stylized clear river water material with dual-layer flowing caustics,
+   * sunlight specular sparkles, and multi-octave surface normals.
    */
   public static create(
     device: pc.GraphicsDevice,
-    tint: pc.Color = new pc.Color(0.24, 0.68, 0.82),
+    tint: pc.Color = new pc.Color(0.22, 0.72, 0.78),
     opacity: number = 0.88
   ): { material: pc.StandardMaterial; update: (dt: number, speed: number) => void } {
     const material = new pc.StandardMaterial();
@@ -192,19 +216,22 @@ export class WaterMaterial {
     const normalTex = this.getRippleNormalTexture(device);
 
     material.diffuse = tint;
-    material.ambient = new pc.Color(0.22, 0.52, 0.62);
+    material.ambient = new pc.Color(0.18, 0.52, 0.62);
 
+    // Primary diffuse caustic map
     material.diffuseMap = diffuseTex;
-    material.diffuseMapTiling = new pc.Vec2(2.5, 8.0);
+    material.diffuseMapTiling = new pc.Vec2(2.5, 7.5);
     material.diffuseMapOffset = new pc.Vec2(0, 0);
 
+    // Multi-octave surface normal ripple map
     material.normalMap = normalTex;
-    material.normalMapTiling = new pc.Vec2(3.0, 8.0);
+    material.normalMapTiling = new pc.Vec2(3.2, 8.5);
     material.normalMapOffset = new pc.Vec2(0, 0);
-    material.bumpiness = 0.12;
+    material.bumpiness = 0.22; // Distinct organic water ripples
 
-    material.specular = new pc.Color(0.22, 0.32, 0.38);
-    material.shininess = 36;
+    // Soft warm sunlight specular highlights
+    material.specular = new pc.Color(0.88, 0.96, 1.0);
+    material.shininess = 64; // Sparkling sunlight wave crests
     material.opacity = opacity;
     material.blendType = pc.BLEND_NORMAL;
     material.cull = pc.CULLFACE_NONE;
@@ -214,16 +241,17 @@ export class WaterMaterial {
     let offsetU = 0;
 
     const update = (dt: number, flowSpeed: number) => {
-      // Primary longitudinal flow
-      offsetV = (offsetV - dt * flowSpeed * 0.07) % 1.0;
-      // Subtle secondary diagonal wave oscillation
-      offsetU = (offsetU + dt * 0.015) % 1.0;
+      // Primary longitudinal flow along the river spline
+      offsetV = (offsetV - dt * flowSpeed * 0.075) % 1.0;
+      // Secondary cross-flow diagonal oscillation
+      offsetU = (offsetU + dt * 0.018) % 1.0;
 
-      material.diffuseMapOffset.x = offsetU * 0.3;
+      // Phase-differenced scrolling creates organic stretching and reforming waves
+      material.diffuseMapOffset.x = offsetU * 0.35;
       material.diffuseMapOffset.y = offsetV;
 
-      material.normalMapOffset.x = -offsetU * 0.5;
-      material.normalMapOffset.y = offsetV * 1.2;
+      material.normalMapOffset.x = -offsetU * 0.55;
+      material.normalMapOffset.y = offsetV * 1.25;
 
       material.update();
     };

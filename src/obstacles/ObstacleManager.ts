@@ -60,9 +60,9 @@ export class ObstacleManager {
         if (dDist < 3.5 && dLat < 3.0) {
           // Rapids boost speed forward with mist
           boat.applyExternalSpeedMultiplier(1.45, 0.3);
-          if (Math.random() < 0.25) {
+          if (Math.random() < 0.3) {
             const pos = boat.getPosition();
-            this.effects.spawnSplash(pos, 2.2);
+            this.effects.spawnWaterfallSplashes(pos);
           }
         }
       }
@@ -98,7 +98,7 @@ export class ObstacleManager {
             boat.nudgeLateral(bounceDir * 3.4);
 
             const hitPos = boat.getPosition();
-            this.effects.spawnSplash(hitPos, 2.0);
+            this.effects.spawnCollisionSplash(hitPos, 1.2);
             this.audio.playDamageThud();
 
             const tookDamage = boat.takeDamage(1);

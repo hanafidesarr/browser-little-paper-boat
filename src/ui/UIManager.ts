@@ -18,7 +18,8 @@ export type ModalType =
   | 'SETTINGS'
   | 'PAUSE'
   | 'LEVEL_COMPLETE'
-  | 'GAME_OVER';
+  | 'GAME_OVER'
+  | 'INSTALL';
 
 const REALM_ICONS: { [id: number]: string } = {
   1: '🌿',
@@ -50,6 +51,8 @@ export class UIManager {
   private modalCardPause!: HTMLElement;
   private modalCardLevelComplete!: HTMLElement;
   private modalCardGameOver!: HTMLElement;
+  private modalCardInstall!: HTMLElement;
+  private deferredInstallPrompt: any = null;
 
   // Active state tracking
   private activeModal: ModalType = 'NONE';
@@ -73,7 +76,6 @@ export class UIManager {
   private mapScrollViewport!: HTMLElement;
   private mapTotalStarsEl!: HTMLElement;
   private mapTotalCollectiblesEl!: HTMLElement;
-  private portraitAdvisoryEl!: HTMLElement;
 
   // Callbacks
   public onPlayClicked: ((levelId: number) => void) | null = null;
@@ -86,12 +88,14 @@ export class UIManager {
   public onNextLevel: (() => void) | null = null;
   public onGameOverRespawn: (() => void) | null = null;
   public onModalStateChange: ((modal: ModalType, isOpen: boolean) => void) | null = null;
+  public onQualityChange: ((quality: 'performance' | 'balanced' | 'quality') => void) | null = null;
 
   constructor(audio: AudioManager) {
     this.audio = audio;
     this.container = document.getElementById('ui-container') as HTMLElement;
     this.buildScreens();
-    this.setupOrientationAdvisory();
+    this.setupResponsiveOrientation();
+    this.setupPWAInstall();
   }
 
   private buildScreens(): void {
@@ -105,8 +109,12 @@ export class UIManager {
             <button id="btn-play" class="cozy-btn">Start Journey</button>
             <button id="btn-levels" class="cozy-btn secondary">River Map 🗺️</button>
             <button id="btn-how" class="cozy-btn secondary">How to Sail ⛵</button>
-            <button id="btn-settings" class="cozy-btn secondary">Audio Settings 🎵</button>
+            <button id="btn-settings" class="cozy-btn secondary">Game Settings ⚙️</button>
             <button id="btn-about" class="cozy-btn secondary">About 📖</button>
+            <div style="display: flex; gap: 6px; width: 100%;">
+              <button id="btn-fullscreen-main" class="cozy-btn secondary" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" title="Toggle Fullscreen">⛶ Fullscreen</button>
+              <button id="btn-install-pwa" class="cozy-btn secondary" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" title="Install Progressive Web App">📱 Install App</button>
+            </div>
           </div>
           <p style="margin-top: 18px; font-size: 0.75rem; color: #769380; font-family: 'Yomogi', cursive;">
             A cozy 3D browser adventure • Powered by PlayCanvas
@@ -151,6 +159,7 @@ export class UIManager {
           <div class="hud-badges">
             <div id="hud-integrity" class="hud-integrity" title="Paper Boat Condition">⛵ ⛵ ⛵</div>
             <div id="hud-collectible" class="hud-badge">🌸 0 / 10</div>
+            <button id="btn-hud-fullscreen" class="hud-pause-btn" title="Toggle Fullscreen">⛶</button>
             <button id="btn-pause" class="hud-pause-btn" title="Pause [Esc]">⏸</button>
           </div>
         </div>
@@ -209,10 +218,20 @@ export class UIManager {
           <button id="btn-close-about" class="cozy-btn">Close</button>
         </div>
 
-        <!-- 3. AUDIO SETTINGS CARD -->
+        <!-- 3. GAME & AUDIO SETTINGS CARD -->
         <div id="modal-card-settings" class="paper-card modal-card hidden" style="width: 400px; max-width: 92%;">
-          <h2 style="color: #2b583f; margin-bottom: 16px;">Audio Settings 🎵</h2>
+          <h2 style="color: #2b583f; margin-bottom: 12px;">Game Settings ⚙️</h2>
           
+          <!-- GRAPHICS QUALITY PROFILE -->
+          <div style="margin-bottom: 14px; text-align: left;">
+            <label style="font-weight: 700; font-size: 0.85rem; color: #2b583f;">Visual Quality Profile:</label>
+            <div class="quality-btn-group">
+              <button id="btn-quality-perf" class="quality-btn" title="Lower GPU/battery usage for mobile">⚡ Performance</button>
+              <button id="btn-quality-bal" class="quality-btn active" title="Balanced quality & smoothness">🌿 Balanced</button>
+              <button id="btn-quality-high" class="quality-btn" title="Crisp high-DPI rendering">✨ Quality</button>
+            </div>
+          </div>
+
           <div class="slider-group">
             <label for="slider-master">Master Volume:</label>
             <input type="range" id="slider-master" min="0" max="1" step="0.05" value="0.8">
@@ -237,16 +256,19 @@ export class UIManager {
             <span id="val-sfx" class="slider-val-badge">80%</span>
           </div>
 
-          <div style="display: flex; justify-content: center; gap: 10px; margin-top: 14px;">
-            <button id="btn-toggle-mute" class="cozy-btn secondary" style="padding: 8px 16px; font-size: 0.9rem;">
+          <div style="display: flex; justify-content: center; gap: 8px; margin-top: 10px;">
+            <button id="btn-toggle-mute" class="cozy-btn secondary" style="padding: 6px 14px; font-size: 0.85rem;">
               🔊 Sound On
             </button>
-            <button id="btn-reset-progress" class="cozy-btn danger" style="padding: 8px 16px; font-size: 0.9rem;">
-              ↺ Reset Progress
+            <button id="btn-fullscreen-settings" class="cozy-btn secondary" style="padding: 6px 14px; font-size: 0.85rem;">
+              ⛶ Fullscreen
+            </button>
+            <button id="btn-reset-progress" class="cozy-btn danger" style="padding: 6px 14px; font-size: 0.85rem;">
+              ↺ Reset
             </button>
           </div>
 
-          <button id="btn-close-settings" class="cozy-btn" style="margin-top: 16px; width: 100%;">
+          <button id="btn-close-settings" class="cozy-btn" style="margin-top: 14px; width: 100%;">
             Save & Close
           </button>
         </div>
@@ -259,7 +281,7 @@ export class UIManager {
             <button id="btn-resume" class="cozy-btn">Resume Drift ⛵</button>
             <button id="btn-restart" class="cozy-btn secondary">Restart Level ↺</button>
             <button id="btn-pause-how" class="cozy-btn secondary">How to Sail 📖</button>
-            <button id="btn-pause-settings" class="cozy-btn secondary">Audio Settings 🎵</button>
+            <button id="btn-pause-settings" class="cozy-btn secondary">Game Settings ⚙️</button>
             <button id="btn-pause-levels" class="cozy-btn secondary">River Map 🗺️</button>
           </div>
         </div>
@@ -293,25 +315,32 @@ export class UIManager {
             <button id="btn-gameover-levels" class="cozy-btn secondary">River Map 🗺️</button>
           </div>
         </div>
-      </div>
 
-      <!-- PORTRAIT ORIENTATION ADVISORY -->
-      <div id="portrait-advisory" class="portrait-advisory hidden">
-        <div class="portrait-box">
-          <div class="rotate-icon">📱</div>
-          <h3 style="font-size: 1.3rem; margin-bottom: 8px;">Please Rotate to Landscape</h3>
-          <p style="font-size: 0.9rem; line-height: 1.5; color: #c4d7cd;">
-            Little Paper Boat is designed for a wonderful widescreen river journey.
-          </p>
+        <!-- 7. PWA INSTALL GUIDE CARD -->
+        <div id="modal-card-install" class="paper-card modal-card hidden" style="width: 380px; max-width: 92%;">
+          <h2 style="color: #2b583f; margin-bottom: 8px;">Install Little Paper Boat 📱</h2>
+          <div id="install-ios-instructions" style="background: #eef7f1; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; text-align: left; font-size: 0.9rem; line-height: 1.5; color: #2e6040;">
+            <p style="font-weight: 700; margin-bottom: 6px;">To install on iPhone or iPad:</p>
+            <p>1. Tap the <strong>Share</strong> button <span style="font-size: 1.1rem;">⎋</span> in Safari</p>
+            <p>2. Scroll down and tap <strong>Add to Home Screen ➕</strong></p>
+            <p>3. Launch from your home screen for full immersion!</p>
+          </div>
+          <div id="install-android-instructions" style="display: none; margin-bottom: 14px;">
+            <p style="font-size: 0.9rem; color: #2e6040; margin-bottom: 10px;">Install directly to your home screen for offline play and full-screen immersion.</p>
+            <button id="btn-prompt-install" class="cozy-btn" style="width: 100%;">Install Now 📲</button>
+          </div>
+          <button id="btn-close-install" class="cozy-btn secondary" style="width: 100%;">Close</button>
         </div>
       </div>
+
+      <!-- Backward-compatible hidden portrait orientation element -->
+      <div id="portrait-advisory" class="hidden" style="display:none;"></div>
     `;
 
     // Grab screen views
     this.mainMenuEl = document.getElementById('screen-main-menu')!;
     this.levelSelectEl = document.getElementById('screen-level-select')!;
     this.hudEl = document.getElementById('hud-overlay')!;
-    this.portraitAdvisoryEl = document.getElementById('portrait-advisory')!;
 
     // Grab single modal layer & cards
     this.modalLayerEl = document.getElementById('modal-layer')!;
@@ -319,6 +348,9 @@ export class UIManager {
     this.modalCardAbout = document.getElementById('modal-card-about')!;
     this.modalCardSettings = document.getElementById('modal-card-settings')!;
     this.modalCardPause = document.getElementById('modal-card-pause')!;
+    this.modalCardLevelComplete = document.getElementById('modal-card-level-complete')!;
+    this.modalCardGameOver = document.getElementById('modal-card-game-over')!;
+    this.modalCardInstall = document.getElementById('modal-card-install')!;
     this.modalCardLevelComplete = document.getElementById('modal-card-level-complete')!;
     this.modalCardGameOver = document.getElementById('modal-card-game-over')!;
 
@@ -384,6 +416,9 @@ export class UIManager {
       case 'GAME_OVER':
         this.modalCardGameOver.classList.remove('hidden');
         break;
+      case 'INSTALL':
+        this.modalCardInstall.classList.remove('hidden');
+        break;
     }
 
     // 3. Unhide the single centralized modal backdrop
@@ -409,6 +444,7 @@ export class UIManager {
     this.modalCardPause.classList.add('hidden');
     this.modalCardLevelComplete.classList.add('hidden');
     this.modalCardGameOver.classList.add('hidden');
+    this.modalCardInstall.classList.add('hidden');
   }
 
   public getActiveModal(): ModalType {
@@ -437,6 +473,22 @@ export class UIManager {
     if (muteBtn) {
       muteBtn.textContent = this.audio.isSoundMuted() ? '🔇 Unmute' : '🔊 Sound On';
     }
+
+    const currentQuality = ProgressionManager.getGraphicsQuality();
+    this.highlightQualityButton(currentQuality);
+  }
+
+  public highlightQualityButton(quality: 'performance' | 'balanced' | 'quality'): void {
+    const perfBtn = document.getElementById('btn-quality-perf');
+    const balBtn = document.getElementById('btn-quality-bal');
+    const highBtn = document.getElementById('btn-quality-high');
+    perfBtn?.classList.remove('active');
+    balBtn?.classList.remove('active');
+    highBtn?.classList.remove('active');
+
+    if (quality === 'performance') perfBtn?.classList.add('active');
+    else if (quality === 'quality') highBtn?.classList.add('active');
+    else balBtn?.classList.add('active');
   }
 
   // ==========================================
@@ -566,6 +618,50 @@ export class UIManager {
       this.closeModal();
     });
 
+    // Fullscreen buttons
+    clickWithAudio('btn-fullscreen-main', () => this.toggleFullscreen());
+    clickWithAudio('btn-fullscreen-settings', () => this.toggleFullscreen());
+    clickWithAudio('btn-hud-fullscreen', () => this.toggleFullscreen());
+
+    // PWA Install buttons
+    clickWithAudio('btn-install-pwa', () => {
+      if (this.deferredInstallPrompt) {
+        this.deferredInstallPrompt.prompt();
+        this.deferredInstallPrompt.userChoice.then(() => {
+          this.deferredInstallPrompt = null;
+        });
+      } else {
+        this.openModal('INSTALL');
+      }
+    });
+
+    clickWithAudio('btn-prompt-install', () => {
+      if (this.deferredInstallPrompt) {
+        this.deferredInstallPrompt.prompt();
+        this.deferredInstallPrompt.userChoice.then(() => {
+          this.deferredInstallPrompt = null;
+          this.closeModal();
+        });
+      }
+    });
+
+    clickWithAudio('btn-close-install', () => {
+      this.closeModal();
+    });
+
+    // Graphics Quality buttons
+    const handleQualitySelect = (quality: 'performance' | 'balanced' | 'quality') => {
+      ProgressionManager.setGraphicsQuality(quality);
+      this.highlightQualityButton(quality);
+      if (this.onQualityChange) {
+        this.onQualityChange(quality);
+      }
+    };
+
+    clickWithAudio('btn-quality-perf', () => handleQualitySelect('performance'));
+    clickWithAudio('btn-quality-bal', () => handleQualitySelect('balanced'));
+    clickWithAudio('btn-quality-high', () => handleQualitySelect('quality'));
+
     // In-game Pause button
     clickWithAudio('btn-pause', () => {
       this.openModal('PAUSE', 'PLAYING');
@@ -656,19 +752,72 @@ export class UIManager {
     this.audio.setVolumes(music, ambient, sfx, master);
   }
 
-  private setupOrientationAdvisory(): void {
-    const checkOrientation = () => {
-      const isPortrait = window.innerHeight > window.innerWidth && window.innerWidth <= 768;
+  public toggleFullscreen(): void {
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if ((document.documentElement as any).webkitRequestFullscreen) {
+        (document.documentElement as any).webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
+    }
+  }
+
+  private setupResponsiveOrientation(): void {
+    const updateOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth;
       if (isPortrait) {
-        this.portraitAdvisoryEl.classList.remove('hidden');
+        document.body.classList.add('is-portrait');
+        document.body.classList.remove('is-landscape');
+        this.container.classList.add('is-portrait');
+        this.container.classList.remove('is-landscape');
       } else {
-        this.portraitAdvisoryEl.classList.add('hidden');
+        document.body.classList.add('is-landscape');
+        document.body.classList.remove('is-portrait');
+        this.container.classList.add('is-landscape');
+        this.container.classList.remove('is-portrait');
       }
     };
 
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-    checkOrientation();
+    window.addEventListener('resize', updateOrientation);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(updateOrientation, 100);
+    });
+    updateOrientation();
+  }
+
+  private setupPWAInstall(): void {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const installBtn = document.getElementById('btn-install-pwa');
+
+    if (isStandalone) {
+      if (installBtn) installBtn.style.display = 'none';
+      return;
+    }
+
+    // Android / Chrome PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e: any) => {
+      e.preventDefault();
+      this.deferredInstallPrompt = e;
+      if (installBtn) installBtn.style.display = 'inline-flex';
+      const androidSection = document.getElementById('install-android-instructions');
+      const iosSection = document.getElementById('install-ios-instructions');
+      if (androidSection && iosSection) {
+        androidSection.style.display = 'block';
+        iosSection.style.display = 'none';
+      }
+    });
+
+    // If iOS Safari, allow showing installation guide modal
+    if (isIOS && !isStandalone && installBtn) {
+      installBtn.style.display = 'inline-flex';
+    }
   }
 
   public updateMainMenuButtonText(): void {

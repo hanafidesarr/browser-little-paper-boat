@@ -664,62 +664,202 @@
 /* ====================================================
    PORTRAIT ORIENTATION ADVISORY (Mobile)
 ==================================================== */
-.portrait-advisory {
+/* ====================================================
+   VIRTUAL JOYSTICK (Mobile-first Responsive Touch)
+==================================================== */
+.virtual-joystick-wrap {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(22, 42, 32, 0.96);
-  backdrop-filter: blur(16px);
+  width: 90px;
+  height: 90px;
+  z-index: 25;
+  pointer-events: auto;
+  touch-action: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  color: #ffffff;
-  text-align: center;
-  padding: 30px;
+  transition: left 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), bottom 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.portrait-advisory.hidden {
-  display: none !important;
+/* Landscape Mode: Joystick at bottom-left */
+.virtual-joystick-wrap.landscape-mode {
+  bottom: calc(22px + var(--safe-bottom));
+  left: calc(28px + var(--safe-left));
+  transform: none;
 }
 
-.portrait-box {
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  padding: 30px 24px;
-  max-width: 320px;
+/* Portrait Mode: Joystick centered at bottom */
+.virtual-joystick-wrap.portrait-mode {
+  bottom: calc(22px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.rotate-icon {
-  font-size: 3.2rem;
-  margin-bottom: 12px;
-  animation: rotateHint 2.4s infinite ease-in-out;
+.joystick-base {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-@keyframes rotateHint {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(90deg); }
+.joystick-knob {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #2e6040;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30);
+  position: absolute;
+  pointer-events: none;
+  will-change: transform;
 }
 
 /* ====================================================
-   RESPONSIVE DESIGN (Landscape Mobile & Small Desktop)
+   GRAPHICS QUALITY SELECTOR BUTTONS
 ==================================================== */
-@media (max-height: 500px) {
-  /* Ultra-wide / compact mobile landscape */
-  .paper-card {
-    padding: 14px 22px;
+.quality-btn-group {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.quality-btn {
+  flex: 1;
+  background: #ffffff;
+  color: #3b5847;
+  border: 2px solid #b7d6be;
+  border-radius: 14px;
+  padding: 8px 6px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.quality-btn:hover {
+  background: #f1f8f3;
+  border-color: #52b788;
+}
+
+.quality-btn.active {
+  background: #2e6040;
+  color: #ffffff;
+  border-color: #2e6040;
+  box-shadow: 0 4px 12px rgba(46, 96, 64, 0.35);
+}
+
+/* ====================================================
+   RESPONSIVE DESIGN (PORTRAIT MOBILE ADAPTATION)
+==================================================== */
+@media (orientation: portrait), (max-width: 600px) {
+  #hud-overlay {
+    padding: max(10px, var(--safe-top)) max(12px, var(--safe-right)) max(10px, var(--safe-bottom)) max(12px, var(--safe-left));
+  }
+  .hud-top {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .hud-level-info {
+    max-width: 46%;
+    padding: 4px 10px;
     border-radius: 14px;
   }
+  .hud-level-title {
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hud-level-subtitle {
+    display: none; /* Hide subtitle in tight portrait to avoid covering river */
+  }
+  .hud-badges {
+    gap: 4px;
+  }
+  .hud-integrity {
+    padding: 4px 8px;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    border-radius: 14px;
+  }
+  .hud-badge {
+    padding: 4px 8px;
+    font-size: 0.82rem;
+    border-radius: 14px;
+  }
+  .hud-pause-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.0rem;
+  }
+  .hud-bottom {
+    margin-bottom: 96px; /* Leave generous breathing room for centered joystick */
+  }
+  .progress-container {
+    width: 65%;
+    height: 8px;
+  }
+  .touch-hint {
+    font-size: 0.72rem;
+  }
+  .hud-checkpoint-banner {
+    font-size: 0.82rem;
+    padding: 6px 16px;
+    top: 55px;
+  }
+  .paper-card {
+    padding: 18px 20px;
+    max-width: 94%;
+    border-radius: 16px;
+  }
   .game-title {
-    font-size: 1.8rem;
-    margin-bottom: 2px;
+    font-size: clamp(1.8rem, 6vw, 2.2rem);
   }
   .game-tagline {
     font-size: 0.95rem;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+  }
+  .btn-stack {
+    width: 100%;
+    max-width: 250px;
+    gap: 6px;
+  }
+  .cozy-btn {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+  }
+}
+
+/* ====================================================
+   RESPONSIVE DESIGN (COMPACT LANDSCAPE MOBILE)
+==================================================== */
+@media (max-height: 520px) and (orientation: landscape) {
+  .paper-card {
+    padding: 12px 20px;
+    border-radius: 14px;
+  }
+  .game-title {
+    font-size: 1.6rem;
+    margin-bottom: 2px;
+  }
+  .game-tagline {
+    font-size: 0.88rem;
+    margin-bottom: 8px;
   }
   .btn-stack {
     flex-direction: row;
@@ -729,35 +869,53 @@
     gap: 6px;
   }
   .cozy-btn {
-    padding: 8px 18px;
-    font-size: 0.9rem;
-  }
-  .realm-card {
-    width: 140px;
-    height: 190px;
-    padding: 10px 8px;
-  }
-  .realm-icon-badge {
-    width: 40px;
-    height: 40px;
-    font-size: 1.3rem;
-  }
-  .realm-title {
+    padding: 6px 16px;
     font-size: 0.85rem;
   }
+  .realm-card {
+    width: 135px;
+    height: 180px;
+    padding: 8px 6px;
+  }
+  .realm-icon-badge {
+    width: 38px;
+    height: 38px;
+    font-size: 1.2rem;
+  }
+  .realm-title {
+    font-size: 0.82rem;
+  }
+  .realm-subtitle {
+    display: none;
+  }
   .hud-level-info {
-    padding: 4px 12px;
+    padding: 4px 10px;
+  }
+  .hud-level-title {
+    font-size: 0.85rem;
+  }
+  .hud-level-subtitle {
+    font-size: 0.70rem;
   }
   .hud-badges {
-    gap: 6px;
+    gap: 5px;
   }
   .hud-integrity, .hud-badge {
-    padding: 4px 10px;
-    font-size: 0.9rem;
+    padding: 4px 8px;
+    font-size: 0.82rem;
   }
   .hud-pause-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 1.0rem;
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+  .progress-container {
+    width: 50%;
+    height: 6px;
+  }
+  .hud-checkpoint-banner {
+    top: 48px;
+    font-size: 0.8rem;
+    padding: 5px 14px;
   }
 }

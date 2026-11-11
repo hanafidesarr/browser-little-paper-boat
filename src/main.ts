@@ -20,6 +20,17 @@ window.addEventListener('unhandledrejection', (event) => {
   });
 });
 
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      console.log('[PWA] Service Worker active with scope:', reg.scope);
+    }).catch((err) => {
+      console.warn('[PWA] Service Worker registration failed:', err);
+    });
+  });
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   const game = new Game();
   (window as any).__gameInstance = game;
@@ -40,6 +51,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   const allPassed = validationResults.every(r => r.passed);
   console.log(`[Validation Summary] 10/10 Levels Validated: ${allPassed ? 'ALL PASSED' : 'ERRORS DETECTED'}`);
+
+  // Direct play and splash test via URL query param
+  if (window.location.search.includes('play=1')) {
+    setTimeout(() => {
+      game.startLevel(1);
+      if (game.getState() === 'TUTORIAL') {
+        document.getElementById('btn-tutorial-understood')?.click();
+      }
+      if (window.location.search.includes('splash=1')) {
+        const boat = game.getBoat();
+        const effects = (game as any).effects;
+        const p = boat.getPosition();
+        effects.spawnFishSplash(p, 1.8);
+      }
+    }, 400);
+    return;
+  }
 
   // Phase 7 QA and Optimization Audit via URL query param
   if (window.location.search.includes('qa=1')) {

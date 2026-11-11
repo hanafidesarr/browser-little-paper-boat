@@ -32,6 +32,7 @@ export class Game {
   private ui: UIManager;
 
   private sunLight: pc.Entity;
+  private boatWakeTimer: number = 0;
 
   constructor() {
     ProgressionManager.init();
@@ -50,6 +51,9 @@ export class Game {
     this.app.start();
 
     window.addEventListener('resize', () => this.app.resizeCanvas());
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => this.app.resizeCanvas(), 100);
+    });
 
     // 2. Lighting
     this.sunLight = new pc.Entity('SunLight');
@@ -103,6 +107,9 @@ export class Game {
     this.bindGlobalKeyboard();
     this.startLoop();
 
+    // Apply saved graphics profile
+    this.setGraphicsQuality(ProgressionManager.getGraphicsQuality());
+
     // Load Level 1 into background for peaceful main menu scene
     this.levelManager.loadLevel(1);
     this.state = 'MAIN_MENU';
@@ -115,6 +122,11 @@ export class Game {
     // Collectible picked up
     this.collectibles.onCollectCallback = (collected, total) => {
       this.ui.updateCollectibles(collected, total);
+    };
+
+    // Graphics Quality profile change
+    this.ui.onQualityChange = (quality) => {
+      this.setGraphicsQuality(quality);
     };
 
     // Boat integrity / damage changed
@@ -283,6 +295,21 @@ export class Game {
     return this.boat;
   }
 
+  public setGraphicsQuality(quality: 'performance' | 'balanced' | 'quality'): void {
+    ProgressionManager.setGraphicsQuality(quality);
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const device = this.app.graphicsDevice as any;
+    if (quality === 'performance') {
+      device.maxPixelRatio = 1.0;
+    } else if (quality === 'balanced') {
+      device.maxPixelRatio = Math.min(1.5, dpr);
+    } else {
+      device.maxPixelRatio = Math.min(2.0, dpr);
+    }
+    this.app.resizeCanvas();
+    console.log(`[Graphics] Profile applied: ${quality} (maxPixelRatio: ${device.maxPixelRatio})`);
+  }
+
   private startLoop(): void {
     this.app.on('update', (dt: number) => {
       if (this.state === 'PLAYING') {
@@ -295,6 +322,15 @@ export class Game {
         this.collectibles.update(dt, this.boat);
         this.checkpoints.update(dt);
         this.levelManager.update(dt);
+
+        // Boat movement wake ripples
+        if (this.boat.isMovementEnabled()) {
+          this.boatWakeTimer += dt;
+          if (this.boatWakeTimer >= 0.28) {
+            this.boatWakeTimer = 0;
+            this.effects.spawnBoatWake(this.boat.getPosition(), 4.8);
+          }
+        }
 
         // Update progress bar
         const total = this.river.getTotalLength();

@@ -23,10 +23,10 @@ export class WaterMaterial {
 
     // 1. Uniform Seamless Soft Blue Base (#8BD3E8)
     // Translucent soft blue volume so water has authentic color while clearly revealing riverbed beneath
-    ctx.fillStyle = 'rgba(139, 211, 232, 0.52)';
+    ctx.fillStyle = 'rgba(125, 205, 228, 0.60)';
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Seamless Multi-Scale Organic Wave Caustic Curves
+    // 2. Seamless Multi-Scale Organic Wave Caustic Curves (Subtle aquatic highlights, no white cloud blowout)
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -74,41 +74,41 @@ export class WaterMaterial {
       }
     };
 
-    // Primary wave highlight bands (#D5F5FA soft translucent ribbon)
-    ctx.strokeStyle = 'rgba(215, 245, 252, 0.42)';
-    ctx.lineWidth = 5.0;
-    for (let i = 0; i < 36; i++) {
+    // Primary delicate aquatic wave highlight bands (subtle soft turquoise, no harsh white cloud patches)
+    ctx.strokeStyle = 'rgba(180, 235, 248, 0.18)';
+    ctx.lineWidth = 2.4;
+    for (let i = 0; i < 28; i++) {
       const x1 = rnd() * size;
       const y1 = rnd() * size;
-      const x2 = x1 + (rnd() - 0.5) * 120;
-      const y2 = y1 + (rnd() - 0.5) * 120;
-      const cx = (x1 + x2) * 0.5 + (rnd() - 0.5) * 45;
-      const cy = (y1 + y2) * 0.5 + (rnd() - 0.5) * 45;
+      const x2 = x1 + (rnd() - 0.5) * 110;
+      const y2 = y1 + (rnd() - 0.5) * 110;
+      const cx = (x1 + x2) * 0.5 + (rnd() - 0.5) * 35;
+      const cy = (y1 + y2) * 0.5 + (rnd() - 0.5) * 35;
 
       drawSeamlessCurve(x1, y1, cx, cy, x2, y2);
     }
 
-    // Secondary delicate surface highlight threads (#E5FAFF)
-    ctx.strokeStyle = 'rgba(235, 252, 255, 0.32)';
-    ctx.lineWidth = 2.6;
-    for (let j = 0; j < 48; j++) {
+    // Secondary delicate surface ripple threads (translucent aquatic shimmer)
+    ctx.strokeStyle = 'rgba(195, 242, 252, 0.12)';
+    ctx.lineWidth = 1.4;
+    for (let j = 0; j < 36; j++) {
       const cx = rnd() * size;
       const cy = rnd() * size;
-      const r = 16 + rnd() * 28;
+      const r = 14 + rnd() * 24;
       const startAngle = rnd() * Math.PI * 2;
       const endAngle = startAngle + Math.PI * (0.8 + rnd() * 0.8);
 
       drawSeamlessArc(cx, cy, r, startAngle, endAngle);
     }
 
-    // 3. Delicate Sunlight Sparkling Glimmers (subtle sparkling highlights when sunlight hits water)
-    for (let k = 0; k < 36; k++) {
+    // 3. Very subtle soft sparkling points
+    for (let k = 0; k < 24; k++) {
       const gx = rnd() * size;
       const gy = rnd() * size;
-      const gr = 1.4 + rnd() * 1.8;
-      const sparkleGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr * 2.5);
-      sparkleGrad.addColorStop(0.0, 'rgba(235, 252, 255, 0.45)'); // #E5FAFF
-      sparkleGrad.addColorStop(1.0, 'rgba(235, 252, 255, 0.0)');
+      const gr = 0.8 + rnd() * 1.2;
+      const sparkleGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr * 2.0);
+      sparkleGrad.addColorStop(0.0, 'rgba(215, 245, 255, 0.16)');
+      sparkleGrad.addColorStop(1.0, 'rgba(215, 245, 255, 0.0)');
       ctx.fillStyle = sparkleGrad;
 
       const offsets = [
@@ -117,7 +117,7 @@ export class WaterMaterial {
       ];
       for (const [ox, oy] of offsets) {
         ctx.beginPath();
-        ctx.arc(gx + ox, gy + oy, gr * 2.5, 0, Math.PI * 2);
+        ctx.arc(gx + ox, gy + oy, gr * 2.0, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -273,9 +273,11 @@ export class WaterMaterial {
     const diffuseTex = this.getCausticTexture(device);
     const normalTex = this.getRippleNormalTexture(device);
 
-    material.diffuse = tint;
-    material.ambient = new pc.Color(0.48, 0.76, 0.88); // Soft blue ambient light
-    material.emissive = new pc.Color(0.06, 0.18, 0.26); // Subtle aquatic radiance
+    material.diffuse = tint
+      ? new pc.Color(tint.r * 0.55, tint.g * 0.65, tint.b * 0.72)
+      : new pc.Color(0.28, 0.54, 0.68);
+    material.ambient = new pc.Color(0.18, 0.36, 0.46); // Calibrated aquatic ambient (prevents RGB blowout)
+    material.emissive = new pc.Color(0.02, 0.08, 0.12); // Subtle aquatic radiance
 
     // Primary diffuse caustic map (natural scale across river width)
     material.diffuseMap = diffuseTex;
@@ -286,11 +288,11 @@ export class WaterMaterial {
     material.normalMap = normalTex;
     material.normalMapTiling = new pc.Vec2(1.0, 2.0);
     material.normalMapOffset = new pc.Vec2(0, 0);
-    material.bumpiness = 0.46; // Gentle natural wave crests without harsh corduroy ridges
+    material.bumpiness = 0.38; // Soft liquid surface waves without harsh glare ridges
 
-    // Soft daylight reflections across moving wave crests
-    material.specular = new pc.Color(0.70, 0.82, 0.92);
-    material.shininess = 38;
+    // Soft subtle water gleam (eliminates broad white cloud blowout reflection)
+    material.specular = new pc.Color(0.08, 0.12, 0.16);
+    material.shininess = 72;
     material.opacity = opacity;
     material.blendType = pc.BLEND_NORMAL;
     material.cull = pc.CULLFACE_NONE;

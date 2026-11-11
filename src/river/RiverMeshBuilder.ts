@@ -458,64 +458,62 @@ export class RiverMeshBuilder {
     canvas.height = 256;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Bright Vibrant Meadow & Light Brown (Coklat Muda) Earth Transition
+    // 1. Bright Vibrant Meadow & Slender Light Brown (Coklat Muda) Shoreline Strip
     const grad = ctx.createLinearGradient(0, 0, size, 0);
-    // Left Bank: Outer Plateau -> Upper Crest -> Coklat Muda Transition -> Waterline Sand Lip
+    // Left Bank: Bright Green Grass (0.00-0.44) -> Slender Coklat Muda Strip (0.45-0.50)
     grad.addColorStop(0.00, '#66DE48'); // Bright vibrant meadow green
-    grad.addColorStop(0.12, '#7EEC56'); // Bright sunlit grass plateau
-    grad.addColorStop(0.18, '#9EEE5E'); // Grass crest edge
-    grad.addColorStop(0.22, '#C4D86E'); // Soft mossy crest transition
-    grad.addColorStop(0.26, '#D6B472'); // Coklat muda: warm light honey brown
-    grad.addColorStop(0.32, '#CA9C5E'); // Coklat muda: light caramel earth
-    grad.addColorStop(0.38, '#BE8E52'); // Coklat muda: light brown bluff
-    grad.addColorStop(0.44, '#C89A5C'); // Coklat muda: warm light clay
-    grad.addColorStop(0.48, '#D8B076'); // Coklat muda: bright golden-sand lip
-    grad.addColorStop(0.50, '#E2C28E'); // Waterline light sand contact
+    grad.addColorStop(0.20, '#74EC54'); // Lush bright sunlit grass
+    grad.addColorStop(0.32, '#82EE58'); // Sloping vibrant green grass
+    grad.addColorStop(0.38, '#9AEF62'); // Lower slope green grass
+    grad.addColorStop(0.42, '#B8EC6E'); // Grass crest right above waterline
+    grad.addColorStop(0.44, '#D2C876'); // Soft golden transition edge
+    grad.addColorStop(0.46, '#D6B472'); // Coklat muda: slender warm honey soil strip
+    grad.addColorStop(0.48, '#CA9C5E'); // Coklat muda: slender light caramel clay lip
+    grad.addColorStop(0.50, '#E0C28E'); // Waterline light sand contact
 
     // Right Bank: Mirror from Waterline to Outer Plateau
-    grad.addColorStop(0.50, '#E2C28E'); // Waterline light sand contact
-    grad.addColorStop(0.52, '#D8B076'); // Coklat muda: bright golden-sand lip
-    grad.addColorStop(0.56, '#C89A5C'); // Coklat muda: warm light clay
-    grad.addColorStop(0.62, '#BE8E52'); // Coklat muda: light brown bluff
-    grad.addColorStop(0.68, '#CA9C5E'); // Coklat muda: light caramel earth
-    grad.addColorStop(0.74, '#D6B472'); // Coklat muda: warm light honey brown
-    grad.addColorStop(0.78, '#C4D86E'); // Soft mossy crest transition
-    grad.addColorStop(0.82, '#9EEE5E'); // Grass crest edge
-    grad.addColorStop(0.88, '#7EEC56'); // Bright sunlit grass plateau
+    grad.addColorStop(0.50, '#E0C28E'); // Waterline light sand contact
+    grad.addColorStop(0.52, '#CA9C5E'); // Coklat muda: slender light caramel clay lip
+    grad.addColorStop(0.54, '#D6B472'); // Coklat muda: slender warm honey soil strip
+    grad.addColorStop(0.56, '#D2C876'); // Soft golden transition edge
+    grad.addColorStop(0.58, '#B8EC6E'); // Grass crest right above waterline
+    grad.addColorStop(0.62, '#9AEF62'); // Lower slope green grass
+    grad.addColorStop(0.68, '#82EE58'); // Sloping vibrant green grass
+    grad.addColorStop(0.80, '#74EC54'); // Lush bright sunlit grass
     grad.addColorStop(1.00, '#66DE48'); // Bright vibrant meadow green
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, 256);
 
-    // 2. Delicate Warm Light Caramel Striations on the Coklat Muda cutbank zones
+    // 2. Delicate Warm Light Caramel Striations on the slender Coklat Muda shoreline zone
     ctx.fillStyle = 'rgba(165, 115, 65, 0.20)';
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 28; i++) {
       const y = Math.random() * 256;
-      const xLeft = 120 + Math.random() * 125;
-      const xRight = 267 + Math.random() * 125;
-      const w = 20 + Math.random() * 45;
-      ctx.fillRect(xLeft, y, w, 2.5);
-      ctx.fillRect(xRight, y, w, 2.5);
+      const xLeft = 226 + Math.random() * 28;
+      const xRight = 258 + Math.random() * 28;
+      const w = 12 + Math.random() * 20;
+      ctx.fillRect(xLeft, y, w, 2.0);
+      ctx.fillRect(xRight, y, w, 2.0);
     }
 
-    // 3. Natural Light Sand Pebbles & Small River Stones (Coklat Muda & Cream)
+    // 3. Natural Light Sand Pebbles along the slender shoreline strip (Coklat Muda & Cream)
     ctx.fillStyle = 'rgba(235, 215, 175, 0.45)';
-    for (let j = 0; j < 65; j++) {
+    for (let j = 0; j < 45; j++) {
       const y = Math.random() * 256;
-      const xLeft = 135 + Math.random() * 110;
-      const xRight = 267 + Math.random() * 110;
-      const r = 1.2 + Math.random() * 2.2;
+      const xLeft = 230 + Math.random() * 24;
+      const xRight = 258 + Math.random() * 24;
+      const r = 1.0 + Math.random() * 1.8;
       ctx.beginPath();
       ctx.arc(xLeft, y, r, 0, Math.PI * 2);
       ctx.arc(xRight, y, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 4. Stylized Wildflower Sprinkles on the Bright Meadow Plateaus (#FFE066 & #FFF6D0)
-    for (let k = 0; k < 60; k++) {
+    // 4. Stylized Wildflower Sprinkles on the Bright Meadow Plateaus & Slopes (#FFE066 & #FFF6D0)
+    for (let k = 0; k < 65; k++) {
       const y = Math.random() * 256;
       const isLeft = Math.random() > 0.5;
-      const x = isLeft ? Math.random() * 90 : 422 + Math.random() * 90;
+      const x = isLeft ? Math.random() * 205 : 307 + Math.random() * 205;
       const isWhite = Math.random() > 0.5;
       ctx.fillStyle = isWhite ? '#FFF6D0' : '#FFE066';
       ctx.beginPath();

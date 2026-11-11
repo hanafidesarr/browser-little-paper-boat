@@ -23,7 +23,9 @@ window.addEventListener('unhandledrejection', (event) => {
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
+    // Relative SW URL supporting both root and GitHub Pages subfolders (/browser-little-paper-boat/)
+    const swUrl = new URL('sw.js', window.location.href);
+    navigator.serviceWorker.register(swUrl.href).then((reg) => {
       console.log('[PWA] Service Worker active with scope:', reg.scope);
     }).catch((err) => {
       console.warn('[PWA] Service Worker registration failed:', err);

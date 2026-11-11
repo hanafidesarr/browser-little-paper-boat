@@ -1,15 +1,15 @@
 // Little Paper Boat — Progressive Web App Service Worker (v1.0.0)
 const CACHE_NAME = 'little-paper-boat-v1.0.0';
 
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/favicon.svg',
-  '/icons/icon.svg'
-];
-
 self.addEventListener('install', (event) => {
+  const scope = self.registration.scope;
+  const PRECACHE_ASSETS = [
+    scope,
+    new URL('index.html', scope).href,
+    new URL('manifest.webmanifest', scope).href,
+    new URL('favicon.svg', scope).href
+  ];
+
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
@@ -52,13 +52,13 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch(() => caches.match('/index.html') || caches.match(request))
+        .catch(() => caches.match(request) || caches.match(new URL('index.html', self.registration.scope).href))
     );
     return;
   }
 
   // Cache-first for static immutable assets (Vite hashed bundles, fonts, icons)
-  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/') || url.hostname.includes('fonts.')) {
+  if (url.pathname.includes('/assets/') || url.pathname.includes('/icons/') || url.hostname.includes('fonts.')) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;

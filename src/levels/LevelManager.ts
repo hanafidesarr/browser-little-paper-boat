@@ -73,9 +73,9 @@ export class LevelManager {
     this.hasTriggeredFinish = false;
 
     // 1. Water, Riverbed & Bank Materials
-    // Bad weather (rain/mist) is slightly murkier (0.44); sunny weather is ultra crystal-clear (0.24)
+    // Bad weather (rain/mist) is slightly murkier (0.60); sunny weather is crystal-clear soft blue (0.50)
     const isBadWeather = config.environment.weather === 'rain' || config.environment.weather === 'mist';
-    const waterOpacity = isBadWeather ? 0.44 : 0.24;
+    const waterOpacity = isBadWeather ? 0.60 : 0.50;
 
     const { material: waterMat, update: waterUpdate } = WaterMaterial.create(
       this.app.graphicsDevice,
@@ -86,8 +86,7 @@ export class LevelManager {
 
     // Rich procedural riverbed material (pebbles, sand & sunken river stones)
     const bedMat = RiverMeshBuilder.createDefaultRiverbedMaterial(
-      this.app.graphicsDevice,
-      config.environment.bankTint
+      this.app.graphicsDevice
     );
 
     // Rich procedural dirt-to-grass riverbank material with level tint
@@ -117,6 +116,7 @@ export class LevelManager {
       treeDensity: config.environment.treeDensity,
       rockDensity: config.environment.rockDensity,
       lilyPadDensity: config.environment.lilyPadDensity,
+      flowerDensity: config.environment.flowerDensity,
       isAutumn: config.environment.isAutumn,
       bridgeDistances: config.bridgeDistances
     });
@@ -133,6 +133,12 @@ export class LevelManager {
     if (this.cameraEntity.camera) {
       this.cameraEntity.camera.clearColor = config.environment.skyColor;
     }
+
+    // Set scene ambient lighting so shadows are soft and cozy fantasy pastel
+    const isTwilight = config.environment.weather === 'fireflies';
+    this.app.scene.ambientLight = isTwilight 
+      ? new pc.Color(0.42, 0.40, 0.58)
+      : new pc.Color(0.68, 0.74, 0.78);
 
     // 6. Spawn Obstacles & Collectibles
     this.obstacles.spawnObstacles(config.obstacles);

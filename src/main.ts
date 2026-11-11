@@ -54,8 +54,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Direct play and splash test via URL query param
   if (window.location.search.includes('play=1')) {
+    const match = window.location.search.match(/level=(\d+)/);
+    const targetLevel = match ? parseInt(match[1], 10) : 1;
+
     setTimeout(() => {
-      game.startLevel(1);
+      game.startLevel(targetLevel);
       if (game.getState() === 'TUTORIAL') {
         document.getElementById('btn-tutorial-understood')?.click();
       }

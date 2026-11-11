@@ -55,7 +55,9 @@ export class Game {
       setTimeout(() => this.app.resizeCanvas(), 100);
     });
 
-    // 2. Lighting
+    // 2. Lighting & Atmosphere
+    this.app.scene.ambientLight = new pc.Color(0.68, 0.74, 0.78); // Soft cozy fantasy daylight ambience
+
     this.sunLight = new pc.Entity('SunLight');
     this.sunLight.addComponent('light', {
       type: 'directional',

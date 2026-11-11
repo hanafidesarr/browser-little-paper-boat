@@ -46,16 +46,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
     ],
     environment: {
       seed: 101,
-      treeDensity: 1.0,
+      treeDensity: 1.1,
       rockDensity: 0.8,
-      lilyPadDensity: 0.5,
+      lilyPadDensity: 0.6,
+      flowerDensity: 1.3,
       isAutumn: false,
       weather: 'sunny',
-      skyColor: new pc.Color(0.72, 0.88, 0.96),
-      sunColor: new pc.Color(1.0, 0.96, 0.88),
-      sunIntensity: 1.15,
-      waterTint: new pc.Color(0.20, 0.68, 0.80),
-      bankTint: new pc.Color(0.36, 0.62, 0.32)
+      skyColor: new pc.Color(0.659, 0.847, 0.910), // #A8D8E8 Sky Blue
+      sunColor: new pc.Color(1.0, 0.898, 0.639), // #FFE5A3 Warm Sunlight
+      sunIntensity: 1.2,
+      waterTint: new pc.Color(0.545, 0.827, 0.910), // #8BD3E8 Soft Blue
+      bankTint: new pc.Color(0.471, 0.725, 0.420)  // #78B96B Meadow Green
     }
   },
 
@@ -103,16 +104,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
     ],
     environment: {
       seed: 202,
-      treeDensity: 0.9,
+      treeDensity: 1.0,
       rockDensity: 0.6,
       lilyPadDensity: 1.8,
+      flowerDensity: 1.5,
       isAutumn: false,
       weather: 'sunny',
-      skyColor: new pc.Color(0.70, 0.90, 0.92),
-      sunColor: new pc.Color(1.0, 0.98, 0.90),
-      sunIntensity: 1.15,
-      waterTint: new pc.Color(0.20, 0.68, 0.75),
-      bankTint: new pc.Color(0.32, 0.65, 0.36)
+      skyColor: new pc.Color(0.68, 0.87, 0.93),
+      sunColor: new pc.Color(1.0, 0.92, 0.72),
+      sunIntensity: 1.18,
+      waterTint: new pc.Color(0.52, 0.83, 0.91), // Soft Blue
+      bankTint: new pc.Color(0.604, 0.796, 0.447) // #9ACB72 Grass Green
     }
   },
 
@@ -160,16 +162,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
     ],
     environment: {
       seed: 303,
-      treeDensity: 1.8,
+      treeDensity: 1.5,
       rockDensity: 1.4,
       lilyPadDensity: 0.5,
+      flowerDensity: 0.9,
       isAutumn: false,
       weather: 'sunny',
-      skyColor: new pc.Color(0.62, 0.82, 0.85),
-      sunColor: new pc.Color(0.95, 0.98, 0.82),
+      skyColor: new pc.Color(0.60, 0.80, 0.88),
+      sunColor: new pc.Color(1.0, 0.88, 0.62),
       sunIntensity: 1.15,
-      waterTint: new pc.Color(0.18, 0.58, 0.65),
-      bankTint: new pc.Color(0.24, 0.52, 0.28)
+      waterTint: new pc.Color(0.50, 0.80, 0.89), // Soft Blue
+      bankTint: new pc.Color(0.278, 0.486, 0.322) // #477C52 Deep Forest Green
     }
   },
 
@@ -219,13 +222,14 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       treeDensity: 1.2,
       rockDensity: 1.0,
       lilyPadDensity: 0.7,
+      flowerDensity: 0.9,
       isAutumn: false,
       weather: 'rain',
-      skyColor: new pc.Color(0.55, 0.65, 0.75),
-      sunColor: new pc.Color(0.85, 0.90, 0.95),
-      sunIntensity: 0.95,
-      waterTint: new pc.Color(0.28, 0.52, 0.65), // Bad weather slightly deeper/murkier
-      bankTint: new pc.Color(0.28, 0.48, 0.32)
+      skyColor: new pc.Color(0.60, 0.72, 0.80),
+      sunColor: new pc.Color(0.88, 0.92, 0.96),
+      sunIntensity: 0.98,
+      waterTint: new pc.Color(0.48, 0.75, 0.84), // Soft Blue slightly murkier for rain
+      bankTint: new pc.Color(0.35, 0.56, 0.36)
     }
   },
 
@@ -275,14 +279,15 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       seed: 505,
       treeDensity: 1.4,
       rockDensity: 0.9,
-      lilyPadDensity: 0.3,
+      lilyPadDensity: 0.4,
+      flowerDensity: 1.0,
       isAutumn: true,
       weather: 'autumn_leaves',
-      skyColor: new pc.Color(0.82, 0.75, 0.68),
-      sunColor: new pc.Color(1.0, 0.88, 0.70),
+      skyColor: new pc.Color(0.74, 0.86, 0.94),
+      sunColor: new pc.Color(1.0, 0.84, 0.58),
       sunIntensity: 1.2,
-      waterTint: new pc.Color(0.28, 0.58, 0.65),
-      bankTint: new pc.Color(0.58, 0.45, 0.25)
+      waterTint: new pc.Color(0.54, 0.82, 0.90), // Soft Blue
+      bankTint: new pc.Color(0.768, 0.572, 0.258) // Warm Autumn Amber
     }
   },
 
@@ -334,13 +339,14 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       treeDensity: 1.3,
       rockDensity: 1.2,
       lilyPadDensity: 0.6,
+      flowerDensity: 1.4,
       isAutumn: false,
       weather: 'sunny',
-      skyColor: new pc.Color(0.70, 0.85, 0.92),
-      sunColor: new pc.Color(1.0, 0.94, 0.82),
-      sunIntensity: 1.15,
-      waterTint: new pc.Color(0.22, 0.62, 0.72),
-      bankTint: new pc.Color(0.38, 0.58, 0.35)
+      skyColor: new pc.Color(0.66, 0.85, 0.92),
+      sunColor: new pc.Color(1.0, 0.90, 0.68),
+      sunIntensity: 1.18,
+      waterTint: new pc.Color(0.53, 0.82, 0.90),
+      bankTint: new pc.Color(0.471, 0.725, 0.420) // Meadow Green
     }
   },
 
@@ -389,15 +395,16 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
     environment: {
       seed: 707,
       treeDensity: 1.1,
-      rockDensity: 0.7,
-      lilyPadDensity: 1.6,
+      rockDensity: 0.8,
+      lilyPadDensity: 1.4,
+      flowerDensity: 1.6,
       isAutumn: false,
       weather: 'sunny',
-      skyColor: new pc.Color(0.72, 0.88, 0.95),
-      sunColor: new pc.Color(1.0, 0.97, 0.88),
-      sunIntensity: 1.15,
-      waterTint: new pc.Color(0.24, 0.65, 0.78),
-      bankTint: new pc.Color(0.35, 0.62, 0.35)
+      skyColor: new pc.Color(0.66, 0.86, 0.93),
+      sunColor: new pc.Color(1.0, 0.91, 0.66),
+      sunIntensity: 1.2,
+      waterTint: new pc.Color(0.55, 0.83, 0.91),
+      bankTint: new pc.Color(0.51, 0.77, 0.45)
     }
   },
 
@@ -447,13 +454,14 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       treeDensity: 1.4,
       rockDensity: 0.8,
       lilyPadDensity: 0.9,
+      flowerDensity: 1.2,
       isAutumn: false,
       weather: 'fireflies',
-      skyColor: new pc.Color(0.24, 0.22, 0.42), // Deep purple twilight
-      sunColor: new pc.Color(0.68, 0.72, 1.0),
-      sunIntensity: 0.75,
-      waterTint: new pc.Color(0.18, 0.38, 0.58),
-      bankTint: new pc.Color(0.22, 0.38, 0.28)
+      skyColor: new pc.Color(0.32, 0.28, 0.48), // Deep purple twilight
+      sunColor: new pc.Color(0.72, 0.76, 1.0),
+      sunIntensity: 0.82,
+      waterTint: new pc.Color(0.42, 0.68, 0.82), // Twilight Soft Blue
+      bankTint: new pc.Color(0.24, 0.42, 0.32)
     }
   },
 
@@ -504,13 +512,14 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       treeDensity: 1.2,
       rockDensity: 1.6,
       lilyPadDensity: 0.4,
+      flowerDensity: 1.1,
       isAutumn: false,
       weather: 'sunny',
-      skyColor: new pc.Color(0.68, 0.88, 0.94),
-      sunColor: new pc.Color(0.98, 0.98, 1.0),
-      sunIntensity: 1.2,
-      waterTint: new pc.Color(0.20, 0.68, 0.82),
-      bankTint: new pc.Color(0.32, 0.58, 0.34)
+      skyColor: new pc.Color(0.65, 0.85, 0.92),
+      sunColor: new pc.Color(1.0, 0.94, 0.72),
+      sunIntensity: 1.22,
+      waterTint: new pc.Color(0.52, 0.82, 0.91), // Soft Blue Crystal
+      bankTint: new pc.Color(0.42, 0.68, 0.38)
     }
   },
 
@@ -568,13 +577,14 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       treeDensity: 1.3,
       rockDensity: 1.0,
       lilyPadDensity: 1.2,
+      flowerDensity: 1.5,
       isAutumn: true,
       weather: 'fireflies',
-      skyColor: new pc.Color(0.85, 0.58, 0.52), // Golden sunset
-      sunColor: new pc.Color(1.0, 0.82, 0.65),
+      skyColor: new pc.Color(0.88, 0.66, 0.58), // Golden sunset
+      sunColor: new pc.Color(1.0, 0.82, 0.62),
       sunIntensity: 1.25,
-      waterTint: new pc.Color(0.28, 0.62, 0.72),
-      bankTint: new pc.Color(0.48, 0.55, 0.32)
+      waterTint: new pc.Color(0.52, 0.78, 0.88), // Sunset Soft Blue
+      bankTint: new pc.Color(0.588, 0.658, 0.384)
     }
   }
 };

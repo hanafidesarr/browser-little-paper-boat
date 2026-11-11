@@ -20,6 +20,7 @@ export interface LevelConfig {
     treeDensity: number;
     rockDensity: number;
     lilyPadDensity: number;
+    flowerDensity?: number;
     isAutumn?: boolean;
     weather: WeatherType;
     skyColor: pc.Color;

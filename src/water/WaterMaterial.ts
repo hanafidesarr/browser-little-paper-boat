@@ -6,8 +6,13 @@ export class WaterMaterial {
   private static foamTexture: pc.Texture | null = null;
 
   /**
-   * Generates a crystal-clear (bening sekali) river caustics texture with organic cellular web patterns.
-   * Completely breaks texture repetition by avoiding modulo grid alignment.
+   * Generates a crystal-clear (soft blue bening) river caustics texture with organic cellular web patterns.
+   * Color direction:
+   * - Shallow water: #B9E8F2
+   * - Normal water: #8BD3E8
+   * - Deep water: #65B9D8
+   * - Surface highlights: #E5FAFF
+   * - Wave highlights: #D5F5FA
    */
   public static getCausticTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.waterTexture) return this.waterTexture;
@@ -18,11 +23,12 @@ export class WaterMaterial {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Crystal-clear aquatic gradient (ultra-translucent so riverbed is clearly visible)
+    // 1. Soft Blue Crystal-Clear Depth Gradient (translucent so riverbed is clearly visible)
+    // Reference Colors: Shallow #B9E8F2 | Normal #8BD3E8 | Deep #65B9D8
     const bgGrad = ctx.createLinearGradient(0, 0, size, size);
-    bgGrad.addColorStop(0.0, 'rgba(20, 110, 132, 0.16)'); // Clear turquoise depth
-    bgGrad.addColorStop(0.5, 'rgba(32, 145, 168, 0.10)'); // Crystalline mid-stream
-    bgGrad.addColorStop(1.0, 'rgba(42, 170, 185, 0.05)'); // Ultra-clear shallow aqua
+    bgGrad.addColorStop(0.0, 'rgba(101, 185, 216, 0.68)'); // #65B9D8 Deep water
+    bgGrad.addColorStop(0.5, 'rgba(139, 211, 232, 0.56)'); // #8BD3E8 Normal water
+    bgGrad.addColorStop(1.0, 'rgba(185, 232, 242, 0.44)'); // #B9E8F2 Shallow water
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, size, size);
 
@@ -37,10 +43,10 @@ export class WaterMaterial {
       return seed / 233280;
     };
 
-    // Primary broad organic caustic bands (soft translucent cyan)
-    ctx.strokeStyle = 'rgba(210, 245, 252, 0.18)';
-    ctx.lineWidth = 5.5;
-    for (let i = 0; i < 35; i++) {
+    // Primary wave highlight bands (#D5F5FA soft translucent ribbon)
+    ctx.strokeStyle = 'rgba(215, 245, 252, 0.35)';
+    ctx.lineWidth = 4.8;
+    for (let i = 0; i < 38; i++) {
       const x1 = rnd() * size;
       const y1 = rnd() * size;
       const x2 = (x1 + (rnd() - 0.5) * 140 + size) % size;
@@ -54,10 +60,10 @@ export class WaterMaterial {
       ctx.stroke();
     }
 
-    // Secondary delicate ripple threads
-    ctx.strokeStyle = 'rgba(225, 250, 255, 0.14)';
-    ctx.lineWidth = 2.8;
-    for (let j = 0; j < 48; j++) {
+    // Secondary delicate surface highlight threads (#E5FAFF)
+    ctx.strokeStyle = 'rgba(235, 252, 255, 0.25)';
+    ctx.lineWidth = 2.4;
+    for (let j = 0; j < 52; j++) {
       const cx = rnd() * size;
       const cy = rnd() * size;
       const r = 14 + rnd() * 32;
@@ -67,6 +73,20 @@ export class WaterMaterial {
       ctx.beginPath();
       ctx.arc(cx, cy, r, startAngle, endAngle);
       ctx.stroke();
+    }
+
+    // 3. Delicate Sunlight Sparkling Glimmers (subtle sparkling highlights when sunlight hits water)
+    for (let k = 0; k < 42; k++) {
+      const gx = rnd() * size;
+      const gy = rnd() * size;
+      const gr = 1.2 + rnd() * 1.8;
+      const sparkleGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr * 2.5);
+      sparkleGrad.addColorStop(0.0, 'rgba(229, 250, 255, 0.35)'); // #E5FAFF
+      sparkleGrad.addColorStop(1.0, 'rgba(229, 250, 255, 0.0)');
+      ctx.fillStyle = sparkleGrad;
+      ctx.beginPath();
+      ctx.arc(gx, gy, gr * 2.5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     const texture = new pc.Texture(device, {
@@ -205,21 +225,23 @@ export class WaterMaterial {
   }
 
   /**
-   * Creates crystal-clear (bening sekali) water material with authentic rolling waves (gelombang ombak)
+   * Creates crystal-clear (Soft Blue bening) water material with authentic rolling waves (gelombang ombak)
    * and non-repeating dual-speed incommensurate UV animation (optimized for 60 FPS mobile).
+   * Reference Colors:
+   * Shallow: #B9E8F2 | Normal: #8BD3E8 | Deep: #65B9D8 | Highlights: #E5FAFF & #D5F5FA
    */
   public static create(
     device: pc.GraphicsDevice,
-    tint: pc.Color = new pc.Color(0.20, 0.68, 0.76),
-    opacity: number = 0.38 // Ultra crystal-clear bening water transparency
+    tint: pc.Color = new pc.Color(0.545, 0.827, 0.910), // #8BD3E8 Soft Blue
+    opacity: number = 0.38 // Soft Blue Crystal-Clear water transparency
   ): { material: pc.StandardMaterial; update: (dt: number, speed: number) => void } {
     const material = new pc.StandardMaterial();
     const diffuseTex = this.getCausticTexture(device);
     const normalTex = this.getRippleNormalTexture(device);
 
     material.diffuse = tint;
-    material.ambient = new pc.Color(0.82, 0.94, 0.98); // Bright ambient lighting eliminates dark shadow patches
-    material.emissive = new pc.Color(0.06, 0.20, 0.24); // Delicate aquatic glow so water stays crystal-clear without black shadows
+    material.ambient = new pc.Color(0.48, 0.76, 0.88); // Soft blue ambient light (preserves clear blue tone without blowing out to white)
+    material.emissive = new pc.Color(0.06, 0.18, 0.26); // Subtle aquatic radiance
 
     // Primary diffuse caustic map (incommensurate irrational tiling)
     material.diffuseMap = diffuseTex;
@@ -230,11 +252,11 @@ export class WaterMaterial {
     material.normalMap = normalTex;
     material.normalMapTiling = new pc.Vec2(3.37, 8.63);
     material.normalMapOffset = new pc.Vec2(0, 0);
-    material.bumpiness = 0.42; // Clearly sculpted wave swells without harsh glare
+    material.bumpiness = 0.38; // Soft natural wave crests without harsh glare
 
-    // Gentle matte specular: soft natural light response with ZERO blinding glare
-    material.specular = new pc.Color(0.04, 0.06, 0.08);
-    material.shininess = 20;
+    // Gentle sunlight highlights (#FFE5A3 & #E5FAFF tone response)
+    material.specular = new pc.Color(0.14, 0.18, 0.22);
+    material.shininess = 28;
     material.opacity = opacity;
     material.blendType = pc.BLEND_NORMAL;
     material.cull = pc.CULLFACE_NONE;

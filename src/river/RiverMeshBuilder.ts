@@ -250,22 +250,23 @@ export class RiverMeshBuilder {
     const mat = new pc.StandardMaterial();
 
     // Procedural hand-painted riverbed: golden river sand, rounded river stones & smooth pebbles
+    // Optimized for Soft Blue Crystal Clear water transparency
     const size = 256;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // Golden sandy silt riverbed base
+    // Golden sand & clean riverbed gravel base
     const grad = ctx.createLinearGradient(0, 0, size, size);
-    grad.addColorStop(0.0, '#756346'); // Moist river sand
-    grad.addColorStop(0.5, '#8c7a5b'); // Sunken pebble gravel
-    grad.addColorStop(1.0, '#6d5a3f'); // Deep silt channel
+    grad.addColorStop(0.0, '#c4b694'); // Clean golden river sand
+    grad.addColorStop(0.5, '#d8caa8'); // Shimmering pebble bed
+    grad.addColorStop(1.0, '#b8a682'); // Mid-channel sand
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
 
-    // Smooth rounded underwater stones & pebbles
-    ctx.fillStyle = 'rgba(65, 54, 40, 0.45)';
+    // Smooth rounded underwater stones & quartz river pebbles
+    ctx.fillStyle = 'rgba(118, 132, 140, 0.42)';
     for (let i = 0; i < 75; i++) {
       const cx = (i * 37) % size;
       const cy = (i * 59) % size;
@@ -276,9 +277,9 @@ export class RiverMeshBuilder {
       ctx.fill();
     }
 
-    // Lighter quartz & golden sand pebbles
-    ctx.fillStyle = 'rgba(180, 160, 125, 0.40)';
-    for (let j = 0; j < 60; j++) {
+    // Lighter cream quartz pebbles (shimmering under clear blue water)
+    ctx.fillStyle = 'rgba(242, 236, 224, 0.55)';
+    for (let j = 0; j < 65; j++) {
       const cx = (j * 43 + 17) % size;
       const cy = (j * 31 + 23) % size;
       const r = 1.5 + (j % 5);
@@ -287,8 +288,8 @@ export class RiverMeshBuilder {
       ctx.fill();
     }
 
-    // Subtle dark algae / silt veins
-    ctx.strokeStyle = 'rgba(48, 56, 36, 0.25)';
+    // Warm sand ripple veins (clean natural riverbed currents)
+    ctx.strokeStyle = 'rgba(168, 150, 122, 0.28)';
     ctx.lineWidth = 2.0;
     for (let k = 0; k < 15; k++) {
       ctx.beginPath();
@@ -311,9 +312,9 @@ export class RiverMeshBuilder {
 
     mat.diffuse = customTint ?? new pc.Color(1.0, 1.0, 1.0);
     mat.diffuseMap = texture;
-    mat.ambient = new pc.Color(0.48, 0.52, 0.44);
-    mat.specular = new pc.Color(0.02, 0.02, 0.02);
-    mat.shininess = 6;
+    mat.ambient = new pc.Color(0.72, 0.74, 0.76);
+    mat.specular = new pc.Color(0.04, 0.04, 0.04);
+    mat.shininess = 8;
     mat.cull = pc.CULLFACE_NONE;
     mat.update();
     return mat;
@@ -457,33 +458,33 @@ export class RiverMeshBuilder {
     canvas.height = 256;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Base Earth & Meadow Gradient across the river profile
+    // 1. Stylized Meadow & Warm Earth Gradient across the river profile
+    // Palette: Meadow Green #78B96B, Grass Green #9ACB72, Warm Soil #875D35
     const grad = ctx.createLinearGradient(0, 0, size, 0);
-    grad.addColorStop(0.00, '#2d5e27'); // Outer meadow grass
-    grad.addColorStop(0.14, '#3c7934'); // Lush plateau grass
-    grad.addColorStop(0.22, '#507c36'); // Embankment crest
-    grad.addColorStop(0.28, '#696836'); // Mossy soil transition
-    grad.addColorStop(0.34, '#7c572e'); // Warm brown soil / dirt bluff
-    grad.addColorStop(0.40, '#664523'); // Stratified cutbank earth
-    grad.addColorStop(0.46, '#4f351a'); // Wet shoreline dark clay
-    grad.addColorStop(0.50, '#5a462e'); // Silt & sand lip at waterline
+    grad.addColorStop(0.00, '#78B96B'); // Outer Meadow Green plateau
+    grad.addColorStop(0.14, '#9ACB72'); // Grass Green upper crest
+    grad.addColorStop(0.22, '#86BC68'); // Soft embankment crest
+    grad.addColorStop(0.28, '#8C8644'); // Warm mossy soil transition
+    grad.addColorStop(0.34, '#875D35'); // Warm brown soil / dirt bluff
+    grad.addColorStop(0.40, '#6E4924'); // Stratified cutbank earth
+    grad.addColorStop(0.46, '#52361B'); // Wet shoreline dark clay
+    grad.addColorStop(0.50, '#7A6648'); // Silt & sand lip at waterline
     // Right side mirror
-    grad.addColorStop(0.54, '#4f351a'); // Wet shoreline dark clay
-    grad.addColorStop(0.60, '#664523'); // Stratified cutbank earth
-    grad.addColorStop(0.66, '#7c572e'); // Warm brown soil / dirt bluff
-    grad.addColorStop(0.72, '#696836'); // Mossy soil transition
-    grad.addColorStop(0.78, '#507c36'); // Embankment crest
-    grad.addColorStop(0.86, '#3c7934'); // Lush plateau grass
-    grad.addColorStop(1.00, '#2d5e27'); // Outer meadow grass
+    grad.addColorStop(0.54, '#52361B'); // Wet shoreline dark clay
+    grad.addColorStop(0.60, '#6E4924'); // Stratified cutbank earth
+    grad.addColorStop(0.66, '#875D35'); // Warm brown soil / dirt bluff
+    grad.addColorStop(0.72, '#8C8644'); // Warm mossy soil transition
+    grad.addColorStop(0.78, '#86BC68'); // Soft embankment crest
+    grad.addColorStop(0.86, '#9ACB72'); // Grass Green upper crest
+    grad.addColorStop(1.00, '#78B96B'); // Outer Meadow Green plateau
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, 256);
 
-    // 2. Stratified Earth Layers and Dirt Specks on the cutbank zones
-    ctx.fillStyle = 'rgba(40, 24, 10, 0.22)';
-    for (let i = 0; i < 40; i++) {
+    // 2. Stratified Warm Earth Layers and Soft Silt on the cutbank zones
+    ctx.fillStyle = 'rgba(60, 36, 16, 0.20)';
+    for (let i = 0; i < 35; i++) {
       const y = Math.random() * 256;
-      // Draw horizontal soil strata in the dirt zone (left & right)
       const xLeft = 145 + Math.random() * 85;
       const xRight = 282 + Math.random() * 85;
       const w = 20 + Math.random() * 45;
@@ -492,7 +493,7 @@ export class RiverMeshBuilder {
     }
 
     // 3. Natural Organic Dirt Pebbles & Small River Stones
-    ctx.fillStyle = 'rgba(165, 140, 105, 0.35)';
+    ctx.fillStyle = 'rgba(195, 175, 140, 0.38)';
     for (let j = 0; j < 65; j++) {
       const y = Math.random() * 256;
       const xLeft = 160 + Math.random() * 80;
@@ -504,14 +505,16 @@ export class RiverMeshBuilder {
       ctx.fill();
     }
 
-    // 4. Subtle Grass Tufts on the Upper Plateaus
-    ctx.fillStyle = 'rgba(85, 160, 65, 0.25)';
-    for (let k = 0; k < 50; k++) {
+    // 4. Stylized Wildflower Sprinkles on the Meadow Plateaus (#F7D66A & #F4F1E5)
+    for (let k = 0; k < 60; k++) {
       const y = Math.random() * 256;
-      const x1 = Math.random() * 95;
-      const x2 = 417 + Math.random() * 95;
-      ctx.fillRect(x1, y, 4, 8);
-      ctx.fillRect(x2, y, 4, 8);
+      const isLeft = Math.random() > 0.5;
+      const x = isLeft ? Math.random() * 95 : 417 + Math.random() * 95;
+      const isWhite = Math.random() > 0.5;
+      ctx.fillStyle = isWhite ? '#F4F1E5' : '#F7D66A';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.6 + Math.random() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     const texture = new pc.Texture(device, {

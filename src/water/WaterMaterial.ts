@@ -218,7 +218,8 @@ export class WaterMaterial {
     const normalTex = this.getRippleNormalTexture(device);
 
     material.diffuse = tint;
-    material.ambient = new pc.Color(0.18, 0.48, 0.58);
+    material.ambient = new pc.Color(0.82, 0.94, 0.98); // Bright ambient lighting eliminates dark shadow patches
+    material.emissive = new pc.Color(0.06, 0.20, 0.24); // Delicate aquatic glow so water stays crystal-clear without black shadows
 
     // Primary diffuse caustic map (incommensurate irrational tiling)
     material.diffuseMap = diffuseTex;

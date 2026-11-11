@@ -28,6 +28,7 @@ export class BoatController {
   private speedModifier: number = 1.0;
   private speedModifierTimer: number = 0;
   private externalSpinTorque: number = 0;
+  private externalSpinYaw: number = 0;
 
   // Paper Integrity & Health State
   public readonly maxIntegrity: number = 3;
@@ -292,7 +293,14 @@ export class BoatController {
     }
 
     if (Math.abs(this.externalSpinTorque) > 0.01) {
-      this.externalSpinTorque -= this.externalSpinTorque * 3.0 * dt;
+      this.externalSpinYaw += this.externalSpinTorque * dt * 420;
+      this.externalSpinTorque -= this.externalSpinTorque * 2.5 * dt;
+    } else if (Math.abs(this.externalSpinYaw) > 0.5) {
+      // Smoothly re-align boat toward forward heading when clear of whirlpool
+      this.externalSpinYaw = this.externalSpinYaw * Math.exp(-4.0 * dt);
+      if (Math.abs(this.externalSpinYaw) <= 0.5) {
+        this.externalSpinYaw = 0;
+      }
     }
 
     if (!this.movementEnabled) {
@@ -408,7 +416,7 @@ export class BoatController {
 
     this.visualRoot.setLocalEulerAngles(
       wavePitch,
-      0,
+      this.externalSpinYaw,
       bankAngle + waveRoll
     );
 

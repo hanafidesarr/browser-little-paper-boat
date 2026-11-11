@@ -6,7 +6,7 @@ export type SplinePoint = SplineControlPoint;
 export class CatmullRomSpline {
   private points: SplineControlPoint[] = [];
   private totalLength: number = 0;
-  private distanceLookup: { distance: number; t: number; pointIndex: number }[] = [];
+  private distanceLookup: { distance: number; u: number }[] = [];
   private readonly defaultWidth: number;
   private readonly defaultCurrent: number;
 
@@ -67,23 +67,14 @@ export class CatmullRomSpline {
     const entry1 = this.distanceLookup[idx + 1];
 
     const segmentDist = entry1.distance - entry0.distance;
-    const factor = segmentDist > 0.00001 ? (clampedDist - entry0.distance) / segmentDist : 0;
+    const factor = segmentDist > 0.000001 ? (clampedDist - entry0.distance) / segmentDist : 0;
 
-    let t: number;
-    let pIdx: number;
+    // Continuous parameter u across all segments (100% C1 continuous, zero jumps)
+    const u = entry0.u + factor * (entry1.u - entry0.u);
 
-    if (entry0.pointIndex === entry1.pointIndex) {
-      pIdx = entry0.pointIndex;
-      t = entry0.t + factor * (entry1.t - entry0.t);
-    } else {
-      if (factor < 0.5) {
-        pIdx = entry0.pointIndex;
-        t = entry0.t;
-      } else {
-        pIdx = entry1.pointIndex;
-        t = entry1.t;
-      }
-    }
+    const numSegments = this.points.length - 1;
+    const pIdx = Math.max(0, Math.min(numSegments - 1, Math.floor(u)));
+    const t = Math.max(0, Math.min(1.0, u - pIdx));
 
     return this.sampleSegment(pIdx, t, clampedDist);
   }
@@ -208,7 +199,7 @@ export class CatmullRomSpline {
     const samplesPerSegment = 25;
 
     let prevPos = this.points[0].position.clone();
-    this.distanceLookup.push({ distance: 0, t: 0, pointIndex: 0 });
+    this.distanceLookup.push({ distance: 0, u: 0 });
 
     for (let i = 0; i < numSegments; i++) {
       const p0 = this.points[Math.max(0, i - 1)].position;
@@ -223,8 +214,7 @@ export class CatmullRomSpline {
         this.totalLength += dist;
         this.distanceLookup.push({
           distance: this.totalLength,
-          t,
-          pointIndex: i
+          u: i + t
         });
         prevPos = pos;
       }

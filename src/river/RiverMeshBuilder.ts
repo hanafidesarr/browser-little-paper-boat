@@ -7,6 +7,8 @@ export interface RiverMeshResult {
   waterEntity: pc.Entity;
   banksMesh: pc.Mesh;
   banksEntity: pc.Entity;
+  bedMesh: pc.Mesh;
+  bedEntity: pc.Entity;
   samples: RiverFrame[];
 }
 
@@ -15,8 +17,10 @@ export interface RiverMeshOptions {
   crossSubdivisions?: number;
   bankWidth?: number;
   bankHeight?: number;
+  bedDepth?: number;
   waterMaterial?: pc.Material;
   bankMaterial?: pc.Material;
+  bedMaterial?: pc.Material;
 }
 
 export class RiverMeshBuilder {
@@ -32,6 +36,7 @@ export class RiverMeshBuilder {
     const crossSubs = Math.max(2, options.crossSubdivisions ?? 4);
     const bankWidth = options.bankWidth ?? 15.0;
     const bankHeight = options.bankHeight ?? 3.0;
+    const bedDepth = options.bedDepth ?? 1.15;
 
     const totalLength = spline.getTotalLength();
     const sampleCount = Math.max(4, Math.ceil(totalLength / stepSize) + 1);
@@ -43,10 +48,13 @@ export class RiverMeshBuilder {
       samples.push(spline.sampleAtDistance(dist));
     }
 
-    // 2. Generate Water Mesh
+    // 2. Generate Water Surface Mesh (flat at y = 0)
     const waterMesh = this.createWaterMesh(app.graphicsDevice, samples, crossSubs);
 
-    // 3. Generate Bank Embankment Mesh
+    // 3. Generate Sunken Riverbed Mesh underneath water (y = -bedDepth)
+    const bedMesh = this.createRiverbedMesh(app.graphicsDevice, samples, crossSubs, bedDepth);
+
+    // 4. Generate Bank Embankment Mesh (y = 0 up to y = bankHeight)
     const banksMesh = this.createBanksMesh(app.graphicsDevice, samples, bankWidth, bankHeight);
 
     // Create Water Entity
@@ -54,6 +62,13 @@ export class RiverMeshBuilder {
     const waterMeshInstance = new pc.MeshInstance(waterMesh, options.waterMaterial || this.createDefaultWaterMaterial());
     waterEntity.addComponent('render', {
       meshInstances: [waterMeshInstance]
+    });
+
+    // Create Riverbed Entity
+    const bedEntity = new pc.Entity('RiverBed');
+    const bedMeshInstance = new pc.MeshInstance(bedMesh, options.bedMaterial || this.createDefaultRiverbedMaterial(app.graphicsDevice));
+    bedEntity.addComponent('render', {
+      meshInstances: [bedMeshInstance]
     });
 
     // Create Banks Entity
@@ -68,6 +83,8 @@ export class RiverMeshBuilder {
       waterEntity,
       banksMesh,
       banksEntity,
+      bedMesh,
+      bedEntity,
       samples
     };
   }
@@ -148,6 +165,158 @@ export class RiverMeshBuilder {
     mesh.update(pc.PRIMITIVE_TRIANGLES);
 
     return mesh;
+  }
+
+  private static createRiverbedMesh(
+    device: pc.GraphicsDevice,
+    samples: RiverFrame[],
+    crossSubs: number,
+    bedDepth: number = 1.15
+  ): pc.Mesh {
+    const numRows = samples.length;
+    const numCols = crossSubs + 1;
+    const numVertices = numRows * numCols;
+
+    const positions = new Float32Array(numVertices * 3);
+    const normals = new Float32Array(numVertices * 3);
+    const uvs = new Float32Array(numVertices * 2);
+
+    let vIdx = 0;
+    let uvIdx = 0;
+
+    for (let r = 0; r < numRows; r++) {
+      const sample = samples[r];
+
+      for (let c = 0; c < numCols; c++) {
+        const uRatio = c / crossSubs; // 0 to 1 across river width
+        const lateralOffset = (uRatio - 0.5) * sample.width;
+
+        const px = sample.position.x + sample.normal.x * lateralOffset;
+        // Deep parabolic river channel underneath water
+        const cupDepth = Math.sin(uRatio * Math.PI) * bedDepth + 0.05;
+        const py = sample.position.y - cupDepth;
+        const pz = sample.position.z + sample.normal.z * lateralOffset;
+
+        positions[vIdx * 3 + 0] = px;
+        positions[vIdx * 3 + 1] = py;
+        positions[vIdx * 3 + 2] = pz;
+
+        // Upward normal with subtle inward curvature
+        const slope = Math.cos(uRatio * Math.PI) * 0.35;
+        normals[vIdx * 3 + 0] = -sample.normal.x * slope;
+        normals[vIdx * 3 + 1] = 0.94;
+        normals[vIdx * 3 + 2] = -sample.normal.z * slope;
+
+        uvs[uvIdx * 2 + 0] = uRatio * 2.0;
+        uvs[uvIdx * 2 + 1] = sample.distance / 8.0;
+
+        vIdx++;
+        uvIdx++;
+      }
+    }
+
+    const numQuads = (numRows - 1) * (numCols - 1);
+    const indices = new Uint16Array(numQuads * 6);
+    let idx = 0;
+
+    for (let r = 0; r < numRows - 1; r++) {
+      for (let c = 0; c < numCols - 1; c++) {
+        const tl = r * numCols + c;
+        const tr = tl + 1;
+        const bl = (r + 1) * numCols + c;
+        const br = bl + 1;
+
+        indices[idx++] = tl;
+        indices[idx++] = tr;
+        indices[idx++] = bl;
+
+        indices[idx++] = tr;
+        indices[idx++] = br;
+        indices[idx++] = bl;
+      }
+    }
+
+    const mesh = new pc.Mesh(device);
+    mesh.setPositions(positions);
+    mesh.setNormals(normals);
+    mesh.setUvs(0, uvs);
+    mesh.setIndices(indices);
+    mesh.update(pc.PRIMITIVE_TRIANGLES);
+
+    return mesh;
+  }
+
+  public static createDefaultRiverbedMaterial(device: pc.GraphicsDevice, customTint?: pc.Color): pc.StandardMaterial {
+    const mat = new pc.StandardMaterial();
+
+    // Procedural hand-painted riverbed: golden river sand, rounded river stones & smooth pebbles
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    // Golden sandy silt riverbed base
+    const grad = ctx.createLinearGradient(0, 0, size, size);
+    grad.addColorStop(0.0, '#756346'); // Moist river sand
+    grad.addColorStop(0.5, '#8c7a5b'); // Sunken pebble gravel
+    grad.addColorStop(1.0, '#6d5a3f'); // Deep silt channel
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    // Smooth rounded underwater stones & pebbles
+    ctx.fillStyle = 'rgba(65, 54, 40, 0.45)';
+    for (let i = 0; i < 75; i++) {
+      const cx = (i * 37) % size;
+      const cy = (i * 59) % size;
+      const rx = 3 + (i % 8);
+      const ry = 2 + (i % 6);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, (i * 0.4), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Lighter quartz & golden sand pebbles
+    ctx.fillStyle = 'rgba(180, 160, 125, 0.40)';
+    for (let j = 0; j < 60; j++) {
+      const cx = (j * 43 + 17) % size;
+      const cy = (j * 31 + 23) % size;
+      const r = 1.5 + (j % 5);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Subtle dark algae / silt veins
+    ctx.strokeStyle = 'rgba(48, 56, 36, 0.25)';
+    ctx.lineWidth = 2.0;
+    for (let k = 0; k < 15; k++) {
+      ctx.beginPath();
+      ctx.moveTo((k * 19) % size, 0);
+      ctx.quadraticCurveTo((k * 31) % size, size * 0.5, (k * 47) % size, size);
+      ctx.stroke();
+    }
+
+    const texture = new pc.Texture(device, {
+      width: size,
+      height: size,
+      format: pc.PIXELFORMAT_RGBA8,
+      addressU: pc.ADDRESS_REPEAT,
+      addressV: pc.ADDRESS_REPEAT,
+      minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR,
+      magFilter: pc.FILTER_LINEAR,
+      mipmaps: true
+    });
+    texture.setSource(canvas);
+
+    mat.diffuse = customTint ?? new pc.Color(1.0, 1.0, 1.0);
+    mat.diffuseMap = texture;
+    mat.ambient = new pc.Color(0.48, 0.52, 0.44);
+    mat.specular = new pc.Color(0.02, 0.02, 0.02);
+    mat.shininess = 6;
+    mat.cull = pc.CULLFACE_NONE;
+    mat.update();
+    return mat;
   }
 
   private static createBanksMesh(

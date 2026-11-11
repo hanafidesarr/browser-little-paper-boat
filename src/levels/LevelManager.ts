@@ -72,13 +72,23 @@ export class LevelManager {
     this.currentConfig = config;
     this.hasTriggeredFinish = false;
 
-    // 1. Water & Bank Materials
+    // 1. Water, Riverbed & Bank Materials
+    // Bad weather (rain/mist) is slightly murkier (0.44); sunny weather is ultra crystal-clear (0.24)
+    const isBadWeather = config.environment.weather === 'rain' || config.environment.weather === 'mist';
+    const waterOpacity = isBadWeather ? 0.44 : 0.24;
+
     const { material: waterMat, update: waterUpdate } = WaterMaterial.create(
       this.app.graphicsDevice,
       config.environment.waterTint,
-      0.38 // Crystal-clear transparent water
+      waterOpacity
     );
     this.waterUpdateFn = waterUpdate;
+
+    // Rich procedural riverbed material (pebbles, sand & sunken river stones)
+    const bedMat = RiverMeshBuilder.createDefaultRiverbedMaterial(
+      this.app.graphicsDevice,
+      config.environment.bankTint
+    );
 
     // Rich procedural dirt-to-grass riverbank material with level tint
     const bankMat = RiverMeshBuilder.createDefaultBankMaterial(
@@ -86,13 +96,15 @@ export class LevelManager {
       config.environment.bankTint
     );
 
-    // 2. Build River Spline & Meshes (Elevated 3.0m land with 15m wide embankments)
+    // 2. Build River Spline & Meshes (Water surface, sunken riverbed, and elevated 3.0m land)
     this.river.initFromPoints(config.splinePoints, {
       waterMaterial: waterMat,
+      bedMaterial: bedMat,
       bankMaterial: bankMat,
       stepSize: 1.5,
       bankWidth: 15.0,
-      bankHeight: 3.0
+      bankHeight: 3.0,
+      bedDepth: 1.15
     });
 
     // 3. Reset Boat to start

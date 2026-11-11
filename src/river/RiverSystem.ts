@@ -20,6 +20,7 @@ export class RiverSystem {
     this.clear();
     this.spline.setPoints(points);
     this.riverResult = RiverMeshBuilder.buildRiver(this.app, this.spline, options);
+    this.rootEntity.addChild(this.riverResult.bedEntity);
     this.rootEntity.addChild(this.riverResult.waterEntity);
     this.rootEntity.addChild(this.riverResult.banksEntity);
   }

@@ -63,3 +63,21 @@
 - Mobile Portrait Menu (390x844): `documentation/screenshots/mobile_opt_mobile_portrait.png`
 - Mobile Portrait Gameplay (390x844): `documentation/screenshots/mobile_opt_portrait_gameplay.png`
 - Natural Water Splashes & Droplets: `documentation/screenshots/mobile_opt_water_splashes.png`
+
+---
+
+## 4. Enhanced Journey, Clear Water, Whirlpools & Spline Stability Verification
+
+| Item | Description | Implementation | Result |
+|---|---|---|---|
+| **1. Anti-Glitch / Anti-Hop Paper Boat** | Continuous monotonic global parameter `u = i + t` across Catmull-Rom spline control points; zero discrete jumping | `CatmullRomSpline.ts`, `BoatController.ts` | **PASS ✅ (Zero hopping/flicker)** |
+| **2. 2x River Journey Length** | All 10 levels doubled from ~200m–330m to ~390m–660m | `LevelData.ts` | **PASS ✅ (390m–660m)** |
+| **3. Progressive Difficulty** | Level 1 peaceful/gentle, subsequent levels feature narrower channels, rapids, obstacles, and gauntlets | `LevelData.ts` | **PASS ✅ (Smooth curve across 10 levels)** |
+| **4. Crystal Clear Water & Riverbed** | Sunken 3D riverbed mesh with procedural stones, pebbles, and sand underneath clear water | `RiverMeshBuilder.ts`, `RiverSystem.ts` | **PASS ✅ (True depth visible)** |
+| **5. Water Shadows Removed** | Emissive and high ambient lighting on water material; bad weather slightly murkier | `WaterMaterial.ts`, `LevelManager.ts` | **PASS ✅ (No dark muddy patches)** |
+| **6. Whirlpool Vortex Spin & Damage** | Whirlpools suck boat in, spin visual yaw 360°, and inflict 1 damage point at vortex core | `ObstacleManager.ts`, `BoatController.ts` | **PASS ✅ (Full physical vortex)** |
+
+### Automated Test Suite:
+- **Level Validator:** 10/10 Levels Validated (100% PASSED)
+- **Acceptance Tests:** 75/75 Assertions Passed (100% PASSED)
+

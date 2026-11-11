@@ -50,11 +50,32 @@ export class ObstacleManager {
       // CONTINUOUS FORCES: Whirlpool & Rapids
       // ==========================================
       if (obs.type === 'whirlpool') {
-        if (dDist < 3.8 && dLat < 3.2) {
-          const latDir = obs.lateralOffset - boatLat;
-          boat.nudgeLateral(Math.sign(latDir) * 2.2 * dt);
-          boat.applySpinTorque(0.4);
-          boat.applyExternalSpeedMultiplier(0.75, 0.2);
+        const dX = obs.lateralOffset - boatLat;
+        const dZ = obs.distance - boatDist;
+        const distToCenter = Math.sqrt(dX * dX + dZ * dZ);
+
+        if (distToCenter < 4.2) {
+          // 1. Vortex suction: pull boat inward toward whirlpool center
+          const pullStrength = Math.max(0, 1.0 - distToCenter / 4.2);
+          boat.nudgeLateral(dX * 4.2 * pullStrength * dt);
+
+          // 2. Rapid vortex spin: paper boat spins around 360 degrees inside whirlpool
+          boat.applySpinTorque(3.2 * pullStrength);
+
+          // 3. Siphon forward speed while trapped in the vortex
+          boat.applyExternalSpeedMultiplier(Math.max(0.3, 1.0 - pullStrength * 0.7), 0.25);
+
+          // 4. Damage: if sucked into the vortex core (< 1.6m), reduce health points!
+          if (distToCenter < 1.6 && obs.canHit()) {
+            obs.registerHit();
+            const hitPos = boat.getPosition();
+            this.effects.spawnCollisionSplash(hitPos, 1.5);
+            this.audio.playDamageThud();
+            const tookDamage = boat.takeDamage(1);
+            if (this.onObstacleBump) {
+              this.onObstacleBump('whirlpool', tookDamage);
+            }
+          }
         }
       } else if (obs.type === 'waterfall_zone') {
         if (dDist < 3.5 && dLat < 3.0) {

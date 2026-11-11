@@ -376,6 +376,10 @@ export class BoatController {
     return this.currentIntegrity;
   }
 
+  public clearInvulnerability(): void {
+    this.invulnerabilityTimer = 0;
+  }
+
   public isInvulnerable(): boolean {
     return this.invulnerabilityTimer > 0;
   }

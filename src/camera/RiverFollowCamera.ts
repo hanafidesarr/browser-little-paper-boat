@@ -47,7 +47,7 @@ export class RiverFollowCamera {
       clearColor: new pc.Color(0.68, 0.86, 0.94),
       fov: GameConfig.CAMERA.FOV,
       nearClip: 0.1,
-      farClip: 500
+      farClip: 220
     });
     this.app.root.addChild(this.cameraEntity);
   }

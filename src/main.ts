@@ -2,6 +2,7 @@ import { Game } from './core/Game';
 import { LevelValidator } from './levels/LevelValidator';
 import { AcceptanceTestRunner } from './test/AcceptanceTestRunner';
 import { Phase6VerificationRunner } from './test/Phase6VerificationRunner';
+import { Phase7QARunner } from './test/Phase7QARunner';
 import './ui/styles.css';
 
 // Global error tracking for technical verification
@@ -24,6 +25,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   (window as any).__gameInstance = game;
   (window as any).runAcceptanceTests = () => AcceptanceTestRunner.runAllTests(game);
   (window as any).runPhase6Verification = () => Phase6VerificationRunner.runVerification(game);
+  (window as any).runPhase7QA = () => Phase7QARunner.runFullAudit(game);
 
   const validationResults = LevelValidator.validateAllLevels();
   console.log('=== LEVEL VALIDATION REPORT ===');
@@ -38,6 +40,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   const allPassed = validationResults.every(r => r.passed);
   console.log(`[Validation Summary] 10/10 Levels Validated: ${allPassed ? 'ALL PASSED' : 'ERRORS DETECTED'}`);
+
+  // Phase 7 QA and Optimization Audit via URL query param
+  if (window.location.search.includes('qa=1')) {
+    setTimeout(async () => {
+      const results = await Phase7QARunner.runFullAudit(game);
+      (window as any).__qaResults = results;
+    }, 500);
+    return;
+  }
 
   // Phase 6 Complete Verification via URL query param
   if (window.location.search.includes('verify=1')) {

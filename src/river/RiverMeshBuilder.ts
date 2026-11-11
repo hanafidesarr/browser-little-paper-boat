@@ -208,7 +208,9 @@ export class RiverMeshBuilder {
       }
     }
 
-    const indicesList: number[] = [];
+    const totalQuads = (numRows - 1) * 4;
+    const indices = new Uint16Array(totalQuads * 6);
+    let idx = 0;
 
     for (let r = 0; r < numRows - 1; r++) {
       // Left Bank quads (columns 0->1 and 1->2)
@@ -218,8 +220,13 @@ export class RiverMeshBuilder {
         const bl = (r + 1) * numCols + c;
         const br = bl + 1;
 
-        indicesList.push(tl, tr, bl);
-        indicesList.push(tr, br, bl);
+        indices[idx++] = tl;
+        indices[idx++] = tr;
+        indices[idx++] = bl;
+
+        indices[idx++] = tr;
+        indices[idx++] = br;
+        indices[idx++] = bl;
       }
 
       // Right Bank quads (columns 3->4 and 4->5)
@@ -229,12 +236,15 @@ export class RiverMeshBuilder {
         const bl = (r + 1) * numCols + c;
         const br = bl + 1;
 
-        indicesList.push(tl, tr, bl);
-        indicesList.push(tr, br, bl);
+        indices[idx++] = tl;
+        indices[idx++] = tr;
+        indices[idx++] = bl;
+
+        indices[idx++] = tr;
+        indices[idx++] = br;
+        indices[idx++] = bl;
       }
     }
-
-    const indices = new Uint16Array(indicesList);
 
     const mesh = new pc.Mesh(device);
     mesh.setPositions(positions);

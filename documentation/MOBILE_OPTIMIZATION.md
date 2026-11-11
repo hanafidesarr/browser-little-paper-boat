@@ -35,7 +35,8 @@ Previously, water splashes created in `EffectManager.ts` utilized `entity.addCom
 
 ### Web App Manifest (`manifest.webmanifest`)
 - **Name / Short Name:** `Little Paper Boat`
-- **Display Mode:** `standalone` (removes browser URL bar and navigation buttons when installed to home screen)
+- **Display Mode:** `fullscreen` (removes browser URL bar, navigation buttons, and status bars when opened)
+- **Orientation:** `any` (seamless portrait and landscape support)
 - **Theme Color:** `#7ac2cd` (soft aquatic river teal)
 - **Background Color:** `#1c3243` (deep river bed blue)
 - **Icons:**
@@ -43,18 +44,42 @@ Previously, water splashes created in `EffectManager.ts` utilized `entity.addCom
   - `icon-512.png` (512x512 PNG, any & maskable)
   - `icon.svg` (vector SVG icon)
 
-### Service Worker (`public/sw.js`)
-- Pre-caches core application shell (`/`, `/index.html`, `/manifest.webmanifest`, `/favicon.svg`, `/icons/icon.svg`).
-- **Network-First for Navigation (HTML):** Ensures users immediately receive updated game releases without stale code lock-in.
-- **Cache-First for Hashed Static Assets:** High-speed instant loading for immutable Vite chunks (`/assets/*`).
-- **Cache Invalidation:** Automatically purges outdated caches upon activating a new version tag.
+### Fullscreen Controls & Fixed Viewport
+- Configured fixed viewport styling (`height: 100dvh`, `position: fixed`, `inset: 0`, `overflow: hidden`, `touch-action: none`) preventing browser bar reveals during touch drags.
+- Automatic `requestFullscreenIfAllowed()` triggered on user gesture (Sail River / Start Journey / Tutorial Understood).
+- Dedicated interactive trigger buttons provided in Main Menu (`#btn-fullscreen-main`), Settings (`#btn-fullscreen-settings`), and In-Game HUD (`#btn-hud-fullscreen`).
 
-### Fullscreen Controls
-- Cross-platform Fullscreen API helper supporting standard `requestFullscreen()` and WebKit `webkitRequestFullscreen()`.
-- Interactive trigger buttons provided in:
-  - Main Menu (`#btn-fullscreen-main`)
-  - Settings Modal (`#btn-fullscreen-settings`)
-  - In-Game HUD (`#btn-hud-fullscreen`)
+---
+
+## 3. Water Rendering & Visual Polish (7 Core Refinements)
+
+### 1. Water Glare Elimination
+- Reduced water specular highlight from `Color(0.88, 0.96, 1.0)` down to `Color(0.04, 0.06, 0.08)` and lowered shininess from 64 to 16.
+- Directional sun intensity softened to 1.15 and ambient fill to 0.58.
+- Harsh white diamond caustics eliminated in favor of gentle, soft watercolor caustics.
+
+### 2. Multi-Octave Small Waves (Gelombang Kecil)
+- Generated procedural high-frequency normal texture combining 3 wave harmonics: longitudinal current ripples, diagonal crossing waves, and fine capillary micro-ripples.
+- Continuous dual-phase UV scrolling offset in update loop creates living river surface motion.
+
+### 3. Under-Boat Hull Wake & Flank Ripples
+- Added `EffectManager.spawnBoatWaterInteraction(...)`:
+  - Central displacement ripple under the hull at waterline (`y = 0.026`).
+  - Dual bow V-ripples branching outward along the boat's flanks.
+  - Micro-foam bubbles and droplets during sharp turns and banking.
+
+### 4. Crystal-Clear Transparent Water (Bening)
+- Water opacity lowered to `0.54` for crystalline clarity revealing the cupped riverbed beneath.
+- Translucent caustics canvas background (`rgba(28, 120, 145, 0.30)` to `rgba(48, 170, 185, 0.15)`).
+
+### 5. Touchpad Navigation (No Virtual Joystick)
+- Virtual joystick visually hidden (`display: none !important; pointer-events: none !important;`).
+- Direct screen touchpad dragging implemented on canvas with smooth sensitivity and horizontal drift compensation.
+
+### 6. Authentic Origami Paper Material (Zero Black Faces)
+- High-res procedural washi paper texture with subtle organic fibers (`#faf8f2`).
+- Flat normal vectors sanitized (`norm.y < -0.15 => norm.mulScalar(-1)`).
+- Material configured with `twoSidedLighting: true`, `cull: CULLFACE_NONE`, `emissive: Color(0.24, 0.23, 0.22)` for paper subsurface translucency, warm ambient `Color(0.85, 0.83, 0.80)`, and soft matte specular `Color(0.06, 0.06, 0.06)`. Absolutely zero pitch-black polygons.
 
 ---
 

@@ -4,7 +4,7 @@
   "description": "A little boat. A wonderful journey. Cozy 3D river navigation game.",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
   "theme_color": "#7ac2cd",
   "background_color": "#1c3243",

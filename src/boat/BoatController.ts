@@ -7,7 +7,8 @@ import { VirtualJoystick } from './VirtualJoystick';
 export interface BoatInputState {
   keyboardAxis: number;  // -1 to +1 from A/D or Arrow keys
   mouseDragAxis: number; // -1 to +1 from mouse drag
-  joystickAxis: number;  // -1 to +1 from touch joystick
+  joystickAxis: number;  // Legacy touch joystick
+  touchpadAxis: number;  // -1 to +1 from smooth screen touchpad drag
 }
 
 export class BoatController {
@@ -41,7 +42,7 @@ export class BoatController {
   private isAtBoundary: boolean = false;
 
   // Inputs
-  private inputState: BoatInputState = { keyboardAxis: 0, mouseDragAxis: 0, joystickAxis: 0 };
+  private inputState: BoatInputState = { keyboardAxis: 0, mouseDragAxis: 0, joystickAxis: 0, touchpadAxis: 0 };
   private virtualJoystick: VirtualJoystick | null = null;
   private mouseDragging: boolean = false;
   private mouseStartX: number = 0;
@@ -70,7 +71,58 @@ export class BoatController {
     // 3. Initialize Input Systems
     this.bindKeyboardInputs();
     this.bindMouseDragInputs();
+    this.bindTouchpadInputs();
     this.initVirtualJoystick();
+  }
+
+  private touchpadPointerId: number = -1;
+  private touchpadStartX: number = 0;
+
+  private bindTouchpadInputs(): void {
+    const canvas = this.app.graphicsDevice.canvas;
+
+    canvas.addEventListener('pointerdown', (e: PointerEvent) => {
+      // Direct screen touch / touchpad drag
+      if (this.touchpadPointerId === -1) {
+        this.touchpadPointerId = e.pointerId;
+        this.touchpadStartX = e.clientX;
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch (_) {}
+      }
+    });
+
+    window.addEventListener('pointermove', (e: PointerEvent) => {
+      if (e.pointerId !== this.touchpadPointerId) return;
+      // Relative responsive touchpad displacement
+      const range = Math.max(120, window.innerWidth * 0.20);
+      let deltaX = e.clientX - this.touchpadStartX;
+      let axis = deltaX / range;
+
+      // Soft anchor drift so player can smoothly steer without running out of screen width
+      if (axis > 1.0) {
+        this.touchpadStartX = e.clientX - range;
+        axis = 1.0;
+      } else if (axis < -1.0) {
+        this.touchpadStartX = e.clientX + range;
+        axis = -1.0;
+      }
+
+      this.inputState.touchpadAxis = Math.max(-1.0, Math.min(1.0, axis));
+    });
+
+    const endTouchpad = (e: PointerEvent) => {
+      if (e.pointerId === this.touchpadPointerId) {
+        this.touchpadPointerId = -1;
+        this.inputState.touchpadAxis = 0;
+        try {
+          canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener('pointerup', endTouchpad);
+    window.addEventListener('pointercancel', endTouchpad);
   }
 
   private createRippleDisc(): pc.Entity {
@@ -195,7 +247,9 @@ export class BoatController {
   public getEffectiveSteerAxis(): number {
     if (!this.movementEnabled) return 0;
     let axis = this.inputState.keyboardAxis;
-    if (Math.abs(this.inputState.joystickAxis) > 0.05) {
+    if (Math.abs(this.inputState.touchpadAxis) > 0.02) {
+      axis = this.inputState.touchpadAxis;
+    } else if (Math.abs(this.inputState.joystickAxis) > 0.05) {
       axis = this.inputState.joystickAxis;
     } else if (Math.abs(this.inputState.mouseDragAxis) > 0.05) {
       axis = this.inputState.mouseDragAxis;
@@ -485,6 +539,16 @@ export class BoatController {
 
   public getPosition(): pc.Vec3 {
     return this.logicalNode.getPosition();
+  }
+
+  public getForwardVector(): pc.Vec3 {
+    const frame = this.river.getFrameAtDistance(this.distance);
+    return frame.tangent;
+  }
+
+  public getNormalVector(): pc.Vec3 {
+    const frame = this.river.getFrameAtDistance(this.distance);
+    return frame.normal;
   }
 
   public isCollidingBoundary(): boolean {

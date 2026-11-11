@@ -668,16 +668,10 @@
    VIRTUAL JOYSTICK (Mobile-first Responsive Touch)
 ==================================================== */
 .virtual-joystick-wrap {
-  position: absolute;
-  width: 90px;
-  height: 90px;
-  z-index: 25;
-  pointer-events: auto;
-  touch-action: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: left 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), bottom 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 /* Landscape Mode: Joystick at bottom-left */

@@ -513,6 +513,7 @@ export class UIManager {
     // Main Menu: Start Journey
     clickWithAudio('btn-play', () => {
       if (this.onPlayClicked) {
+        this.requestFullscreenIfAllowed();
         let targetLevel = 1;
         for (let i = 1; i <= 10; i++) {
           if (ProgressionManager.isLevelUnlocked(i)) {
@@ -754,16 +755,24 @@ export class UIManager {
 
   public toggleFullscreen(): void {
     if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else if ((document.documentElement as any).webkitRequestFullscreen) {
-        (document.documentElement as any).webkitRequestFullscreen();
-      }
+      this.requestFullscreenIfAllowed();
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       } else if ((document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
+      }
+    }
+  }
+
+  public requestFullscreenIfAllowed(): void {
+    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+      const el = document.documentElement as any;
+      const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if (rfs) {
+        try {
+          rfs.call(el).catch(() => {});
+        } catch (_) {}
       }
     }
   }
@@ -904,6 +913,7 @@ export class UIManager {
       if (isUnlocked) {
         latestUnlockedElement = card;
         const launchLevel = () => {
+          this.requestFullscreenIfAllowed();
           this.audio.init();
           this.audio.resume();
           this.audio.playButtonClick();

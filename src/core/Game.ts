@@ -60,7 +60,7 @@ export class Game {
     this.sunLight.addComponent('light', {
       type: 'directional',
       color: new pc.Color(1.0, 0.96, 0.88),
-      intensity: 1.35
+      intensity: 1.15
     });
     this.sunLight.setEulerAngles(45, 30, 0);
     this.app.root.addChild(this.sunLight);
@@ -68,8 +68,8 @@ export class Game {
     const ambientFill = new pc.Entity('AmbientFill');
     ambientFill.addComponent('light', {
       type: 'directional',
-      color: new pc.Color(0.7, 0.82, 0.95),
-      intensity: 0.55
+      color: new pc.Color(0.72, 0.84, 0.96),
+      intensity: 0.58
     });
     ambientFill.setEulerAngles(-60, 150, 0);
     this.app.root.addChild(ambientFill);
@@ -326,9 +326,15 @@ export class Game {
         // Boat movement wake ripples
         if (this.boat.isMovementEnabled()) {
           this.boatWakeTimer += dt;
-          if (this.boatWakeTimer >= 0.28) {
+          if (this.boatWakeTimer >= 0.18) {
             this.boatWakeTimer = 0;
-            this.effects.spawnBoatWake(this.boat.getPosition(), 4.8);
+            this.effects.spawnBoatWaterInteraction(
+              this.boat.getPosition(),
+              this.boat.getForwardVector(),
+              this.boat.getNormalVector(),
+              this.boat.getForwardSpeed(),
+              this.boat.getLateralVelocity()
+            );
           }
         }
 

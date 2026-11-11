@@ -428,20 +428,103 @@ export class EffectManager {
    * 2. Boat movement wake:
    * Periodic gentle trailing ripples behind the paper boat stern.
    */
-  public spawnBoatWake(sternPos: pc.Vec3, boatSpeed: number): void {
-    if (boatSpeed < 1.0) return;
+  /**
+   * 2. Comprehensive Boat Under-Hull & Waterline Waves & Splashes:
+   * Generates:
+   * - Soft direct under-hull displacement ripple at the waterline
+   * - Left & right bow V-ripples spreading outward from the paper boat flanks
+   * - Stern wake ripples
+   * - Gentle micro-droplets fizzing when banking / turning
+   */
+  public spawnBoatWaterInteraction(
+    boatPos: pc.Vec3,
+    fwdVector: pc.Vec3,
+    normalVector: pc.Vec3,
+    boatSpeed: number,
+    lateralVel: number = 0
+  ): void {
+    if (boatSpeed < 0.6) return;
 
-    const ring = this.ringPool.get();
-    ring.age = 0;
-    ring.duration = 0.65;
-    ring.startScale = 0.45;
-    ring.targetScale = 1.4;
-    ring.entity.setPosition(sternPos.x, 0.032, sternPos.z);
-    ring.entity.setLocalScale(ring.startScale, 1.0, ring.startScale);
-    ring.material.opacity = 0.45;
-    ring.material.update();
-    ring.entity.enabled = true;
-    this.activeRings.push(ring);
+    // 1. Central under-hull displacement ripple directly under the boat
+    const hullRing = this.ringPool.get();
+    hullRing.age = 0;
+    hullRing.duration = 0.55;
+    hullRing.startScale = 0.50;
+    hullRing.targetScale = 1.30;
+    hullRing.entity.setPosition(boatPos.x, 0.026, boatPos.z);
+    hullRing.entity.setLocalScale(hullRing.startScale, 1.0, hullRing.startScale);
+    hullRing.material.opacity = 0.38;
+    hullRing.material.update();
+    hullRing.entity.enabled = true;
+    this.activeRings.push(hullRing);
+
+    // 2. Left and Right Bow V-Wake (Gelombang Haluan V menyebar ke samping)
+    const bowOffset = 0.50;
+    const flankOffset = 0.30;
+
+    // Left bow ripple
+    const leftRing = this.ringPool.get();
+    leftRing.age = 0;
+    leftRing.duration = 0.45;
+    leftRing.startScale = 0.22;
+    leftRing.targetScale = 0.85;
+    leftRing.entity.setPosition(
+      boatPos.x + fwdVector.x * bowOffset - normalVector.x * flankOffset,
+      0.026,
+      boatPos.z + fwdVector.z * bowOffset - normalVector.z * flankOffset
+    );
+    leftRing.entity.setLocalScale(leftRing.startScale, 1.0, leftRing.startScale);
+    leftRing.material.opacity = 0.32;
+    leftRing.material.update();
+    leftRing.entity.enabled = true;
+    this.activeRings.push(leftRing);
+
+    // Right bow ripple
+    const rightRing = this.ringPool.get();
+    rightRing.age = 0;
+    rightRing.duration = 0.45;
+    rightRing.startScale = 0.22;
+    rightRing.targetScale = 0.85;
+    rightRing.entity.setPosition(
+      boatPos.x + fwdVector.x * bowOffset + normalVector.x * flankOffset,
+      0.026,
+      boatPos.z + fwdVector.z * bowOffset + normalVector.z * flankOffset
+    );
+    rightRing.entity.setLocalScale(rightRing.startScale, 1.0, rightRing.startScale);
+    rightRing.material.opacity = 0.32;
+    rightRing.material.update();
+    rightRing.entity.enabled = true;
+    this.activeRings.push(rightRing);
+
+    // 3. Gentle micro-droplets / foam bubbles when turning or gliding
+    if (Math.abs(lateralVel) > 0.5) {
+      const drop = this.dropletPool.get();
+      drop.age = 0;
+      drop.duration = 0.42;
+      drop.initialScale = 0.06;
+      const turnSide = Math.sign(lateralVel);
+      drop.velocity.set(
+        -normalVector.x * turnSide * 0.9,
+        1.1 + Math.random() * 0.5,
+        -normalVector.z * turnSide * 0.9
+      );
+      drop.entity.setPosition(
+        boatPos.x - normalVector.x * turnSide * 0.32,
+        0.045,
+        boatPos.z - normalVector.z * turnSide * 0.32
+      );
+      drop.entity.setLocalScale(drop.initialScale, drop.initialScale, drop.initialScale);
+      drop.material.opacity = 0.65;
+      drop.material.update();
+      drop.entity.enabled = true;
+      this.activeDroplets.push(drop);
+    }
+  }
+
+  public spawnBoatWake(sternPos: pc.Vec3, boatSpeed: number): void {
+    const fwd = new pc.Vec3(0, 0, 1);
+    const n = new pc.Vec3(1, 0, 0);
+    this.spawnBoatWaterInteraction(sternPos, fwd, n, boatSpeed, 0);
   }
 
   /**

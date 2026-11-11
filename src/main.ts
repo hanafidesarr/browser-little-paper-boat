@@ -92,6 +92,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
       const results = await AcceptanceTestRunner.runAllTests(game);
       (window as any).__testResults = results;
+      const resEl = document.createElement('div');
+      resEl.id = 'acceptance-test-results';
+      resEl.textContent = JSON.stringify(results);
+      document.body.appendChild(resEl);
     }, 500);
     return;
   }

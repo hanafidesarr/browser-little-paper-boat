@@ -21,6 +21,8 @@ export class VirtualJoystick {
     this.container = document.createElement('div');
     this.container.id = 'virtual-joystick-container';
     this.container.className = 'virtual-joystick-wrap';
+    this.container.style.display = 'none'; // Hidden: replaced by direct screen touchpad
+    this.container.style.pointerEvents = 'none';
 
     this.baseEl = document.createElement('div');
     this.baseEl.className = 'joystick-base';
@@ -155,7 +157,7 @@ export class VirtualJoystick {
 
   public setVisible(visible: boolean): void {
     this.isVisible = visible;
-    this.container.style.display = visible ? 'flex' : 'none';
+    this.container.style.display = 'none'; // Replaced by direct screen touchpad
     if (!visible) {
       this.currentAxis = 0;
       this.isPointerDown = false;

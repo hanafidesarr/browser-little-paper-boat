@@ -58,7 +58,7 @@ export class RiverMeshBuilder {
 
     // Create Banks Entity
     const banksEntity = new pc.Entity('RiverBanks');
-    const banksMeshInstance = new pc.MeshInstance(banksMesh, options.bankMaterial || this.createDefaultBankMaterial());
+    const banksMeshInstance = new pc.MeshInstance(banksMesh, options.bankMaterial || this.createDefaultBankMaterial(app.graphicsDevice));
     banksEntity.addComponent('render', {
       meshInstances: [banksMeshInstance]
     });
@@ -258,10 +258,49 @@ export class RiverMeshBuilder {
     return mat;
   }
 
-  private static createDefaultBankMaterial(): pc.StandardMaterial {
+  private static createDefaultBankMaterial(device: pc.GraphicsDevice): pc.StandardMaterial {
     const mat = new pc.StandardMaterial();
-    mat.diffuse = new pc.Color(0.32, 0.58, 0.28);
-    mat.ambient = new pc.Color(0.22, 0.42, 0.20);
+
+    // Procedural hand-painted shoreline & grass gradient texture
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    // Horizontal cross-section: 0.0 (outer left) -> 0.5 (shoreline) -> 1.0 (outer right)
+    const grad = ctx.createLinearGradient(0, 0, size, 0);
+    grad.addColorStop(0.0, '#2d5c28'); // Outer forest grass
+    grad.addColorStop(0.25, '#3b7834'); // Mid slope meadow
+    grad.addColorStop(0.46, '#567540'); // Wet shoreline moss
+    grad.addColorStop(0.50, '#6d7550'); // Sandy pebble water contact
+    grad.addColorStop(0.54, '#567540'); // Wet shoreline moss
+    grad.addColorStop(0.75, '#3b7834'); // Mid slope meadow
+    grad.addColorStop(1.0, '#2d5c28'); // Outer forest grass
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    // Subtle soft grass noise
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    for (let i = 0; i < 60; i++) {
+      ctx.fillRect(Math.random() * size, Math.random() * size, Math.random() * 8 + 2, Math.random() * 8 + 2);
+    }
+
+    const texture = new pc.Texture(device, {
+      width: size,
+      height: size,
+      format: pc.PIXELFORMAT_RGBA8,
+      addressU: pc.ADDRESS_CLAMP_TO_EDGE,
+      addressV: pc.ADDRESS_REPEAT,
+      minFilter: pc.FILTER_LINEAR,
+      magFilter: pc.FILTER_LINEAR
+    });
+    texture.setSource(canvas);
+
+    mat.diffuse = new pc.Color(1.0, 1.0, 1.0);
+    mat.diffuseMap = texture;
+    mat.ambient = new pc.Color(0.28, 0.45, 0.25);
     mat.cull = pc.CULLFACE_NONE;
     mat.update();
     return mat;

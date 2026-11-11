@@ -25,6 +25,37 @@ export class WeatherEffects {
       this.initFallingLeaves(targetPos);
     } else if (type === 'fireflies') {
       this.initFireflies(targetPos);
+    } else {
+      // Sunny: gentle floating golden pollen and dandelion seeds
+      this.initPollenAndSeeds(targetPos);
+    }
+  }
+
+  private initPollenAndSeeds(center: pc.Vec3): void {
+    const seedMat = new pc.StandardMaterial();
+    seedMat.diffuse = new pc.Color(1.0, 0.96, 0.75);
+    seedMat.emissive = new pc.Color(0.85, 0.80, 0.50);
+    seedMat.opacity = 0.75;
+    seedMat.blendType = pc.BLEND_ADDITIVE;
+    seedMat.update();
+
+    for (let i = 0; i < 30; i++) {
+      const mote = new pc.Entity('SunMote');
+      mote.addComponent('render', { type: 'sphere' });
+      mote.setLocalScale(0.14, 0.14, 0.14);
+      if (mote.render?.meshInstances[0]) mote.render.meshInstances[0].material = seedMat;
+
+      const px = center.x + (Math.random() - 0.5) * 26;
+      const py = center.y + 0.5 + Math.random() * 4.5;
+      const pz = center.z + (Math.random() - 0.5) * 26;
+      mote.setPosition(px, py, pz);
+
+      this.rootEntity.addChild(mote);
+      this.particleData.push({
+        entity: mote,
+        speed: new pc.Vec3((Math.random() - 0.5) * 0.4, -(0.15 + Math.random() * 0.2), 0.6 + Math.random() * 0.5),
+        seed: Math.random() * 100
+      });
     }
   }
 

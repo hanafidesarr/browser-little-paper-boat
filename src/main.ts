@@ -4,6 +4,9 @@ import { RiverPathPresets } from './river/RiverPathPresets';
 import { BoatController } from './boat/BoatController';
 import { RiverFollowCamera } from './camera/RiverFollowCamera';
 import { RiverDebugVisualizer } from './debug/RiverDebugVisualizer';
+import { WaterMaterial } from './water/WaterMaterial';
+import { EnvironmentManager } from './environment/EnvironmentManager';
+import { WeatherEffects } from './environment/WeatherEffects';
 
 window.addEventListener('DOMContentLoaded', () => {
   // 1. Initialize PlayCanvas Application
@@ -21,12 +24,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('resize', () => app.resizeCanvas());
 
-  // 2. Lighting: Directional sunlight & ambient sky fill
+  // 2. Warm Cinematic Sunlight & Soft Atmospheric Fog
+  const skyColor = new pc.Color(0.70, 0.86, 0.94);
+  app.scene.fog.type = pc.FOG_LINEAR;
+  app.scene.fog.color.copy(skyColor);
+  app.scene.fog.start = 65;
+  app.scene.fog.end = 260;
+  app.scene.ambientLight = new pc.Color(0.55, 0.68, 0.76);
+
   const sunLight = new pc.Entity('SunLight');
   sunLight.addComponent('light', {
     type: 'directional',
-    color: new pc.Color(1.0, 0.96, 0.88),
-    intensity: 1.3
+    color: new pc.Color(1.0, 0.96, 0.86),
+    intensity: 1.35
   });
   sunLight.setEulerAngles(45, 30, 0);
   app.root.addChild(sunLight);
@@ -34,16 +44,24 @@ window.addEventListener('DOMContentLoaded', () => {
   const ambientFill = new pc.Entity('AmbientFill');
   ambientFill.addComponent('light', {
     type: 'directional',
-    color: new pc.Color(0.7, 0.82, 0.95),
+    color: new pc.Color(0.72, 0.84, 0.96),
     intensity: 0.5
   });
   ambientFill.setEulerAngles(-60, 150, 0);
   app.root.addChild(ambientFill);
 
-  // 3. Initialize Procedural River System (Preserving Phase 1)
+  // 3. Stylized Animated Water Material & Bank Material
+  const { material: waterMat, update: waterUpdate } = WaterMaterial.create(
+    app.graphicsDevice,
+    new pc.Color(0.24, 0.68, 0.82),
+    0.88
+  );
+
+  // 4. Initialize Procedural River System
   const river = new RiverSystem(app);
   const testRiverPoints = RiverPathPresets.getPhase1TestRiver();
   river.initFromPoints(testRiverPoints, {
+    waterMaterial: waterMat,
     stepSize: 1.5,
     crossSubdivisions: 4,
     bankWidth: 12.0,
@@ -52,48 +70,54 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const totalLength = river.getTotalLength();
 
-  // 4. Instantiate Hybrid Boat Controller
+  // 5. Instantiate Hybrid Boat Controller
   const boat = new BoatController(app, river);
   boat.setPosition(2.0, 0.0);
 
-  // 5. Reconstructed Elevated Follow Camera with Lookahead
+  // 6. Reconstructed Elevated Follow Camera with Lookahead
   const camera = new RiverFollowCamera(app, river, boat);
 
-  // 6. Debug Visualizer (Preserving Phase 1 + Camera Vector Debugger)
+  // 7. Deterministic Spline-Relative Environment Population
+  const environment = new EnvironmentManager(app, river);
+  environment.populate({
+    seed: 101,
+    treeDensity: 1.3,
+    rockDensity: 1.0,
+    lilyPadDensity: 0.8,
+    flowerDensity: 1.2,
+    bridgeDistances: [95, 250]
+  });
+
+  // 8. Atmospheric Weather Particles (Sunny floating pollen & motes)
+  const weather = new WeatherEffects(app);
+  weather.setWeather('sunny', boat.getPosition());
+
+  // 9. Debug Visualizer (starts disabled, toggleable via D)
   const debugVis = new RiverDebugVisualizer(app, river);
 
-  // 7. Telemetry & UI Bindings
-  const elDistance = document.getElementById('p2-metric-distance')!;
-  const elLateral = document.getElementById('p2-metric-lateral')!;
-  const elSpeed = document.getElementById('p2-metric-speed')!;
-  const elWidth = document.getElementById('p2-metric-width')!;
-  const elSection = document.getElementById('p2-section-name')!;
+  // 10. UI & Telemetry
+  const elDistance = document.getElementById('p3-metric-distance')!;
+  const elLateral = document.getElementById('p3-metric-lateral')!;
+  const elSpeed = document.getElementById('p3-metric-speed')!;
+  const elWidth = document.getElementById('p3-metric-width')!;
+  const elSection = document.getElementById('p3-section-name')!;
   const boundaryFlash = document.getElementById('boundary-flash')!;
 
-  // Camera Telemetry DOM elements
-  const elCamPos = document.getElementById('cam-pos')!;
-  const elCamPitch = document.getElementById('cam-pitch')!;
-  const elCamYaw = document.getElementById('cam-yaw')!;
-  const elCamTarget = document.getElementById('cam-target')!;
-  const elCamBoatDist = document.getElementById('cam-boat-dist')!;
-  const elCamHeight = document.getElementById('cam-height')!;
-  const elBoatPos = document.getElementById('boat-pos')!;
-
-  const btnToggleDebug = document.getElementById('p2-btn-toggle-debug')!;
-  const btnToggleJoystick = document.getElementById('p2-btn-toggle-joystick')!;
-  const btnRestart = document.getElementById('p2-btn-restart')!;
+  const btnToggleDebug = document.getElementById('p3-btn-toggle-debug')!;
+  const btnToggleJoystick = document.getElementById('p3-btn-toggle-joystick')!;
+  const btnRestart = document.getElementById('p3-btn-restart')!;
 
   let joystickVisible = true;
   let isPaused = false;
 
   const getSectionName = (dist: number): string => {
-    if (dist < 35) return '1. Straight Section (Base Speed 4.5m/s)';
-    if (dist < 75) return '2. Gentle Left Turn (Width 8.2m)';
-    if (dist < 120) return '3. Gentle Right Turn (Width 8.0m)';
-    if (dist < 195) return '4. S-Shaped Curve (Lateral Agility)';
-    if (dist < 240) return '5. Narrow Passage (Choke Point Width 4.8m - Current +20%)';
-    if (dist < 285) return '6. Wide Section (Expansive Basin Width 12.0m)';
-    return '7. Compound Left/Right Turns (Final Approach)';
+    if (dist < 35) return '1. Morning Creek (Straight Flow)';
+    if (dist < 75) return '2. Lily Garden Bend (Gentle Left)';
+    if (dist < 120) return '3. Rustic Bridge (Gentle Right)';
+    if (dist < 195) return '4. Mossy S-Curves (Lush Canopy)';
+    if (dist < 240) return '5. Narrow Gorge Passage (Width 4.8m)';
+    if (dist < 285) return '6. Expansive Lagoon (Width 12.0m)';
+    return '7. Blossom Estuary (Compound Curves)';
   };
 
   // Bank Bump Event
@@ -135,23 +159,34 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 8. Main Game Loop
+  // 11. Main Game Loop
   app.on('update', (dt: number) => {
     if (!isPaused && dt > 0) {
+      // Flowing water animated caustics & normal map
+      waterUpdate(dt, boat.getForwardSpeed());
+
+      // Floating lily pad oscillations
+      environment.update(dt);
+
+      // Atmospheric pollen & motes drifting in breeze
+      weather.update(dt, boat.getPosition());
+
+      // Boat & Camera updates
       boat.update(dt);
       camera.update(dt);
     }
 
-    // Render debug vectors (spline lines + camera look ray & vectors)
-    debugVis.render();
-    debugVis.renderCameraDebug(camera, boat);
+    // Render debug vectors if enabled
+    if (debugVis.isEnabled()) {
+      debugVis.render();
+      debugVis.renderCameraDebug(camera, boat);
+    }
 
     // Telemetry updates
     const dist = boat.getDistance();
     const lat = boat.getLateralOffset();
     const fwdSpeed = boat.getForwardSpeed();
     const frame = river.getFrameAtDistance(dist);
-    const bPos = boat.getLogicalPosition();
 
     elDistance.textContent = `${dist.toFixed(1)} m / ${totalLength.toFixed(1)} m`;
     elLateral.textContent = `${lat >= 0 ? '+' : ''}${lat.toFixed(2)} m`;
@@ -159,17 +194,7 @@ window.addEventListener('DOMContentLoaded', () => {
     elWidth.textContent = `${frame.width.toFixed(1)} m`;
     elSection.textContent = getSectionName(dist);
 
-    // Camera Telemetry
-    const camTele = camera.getTelemetry();
-    elCamPos.textContent = `(${camTele.worldPosition.x.toFixed(1)}, ${camTele.worldPosition.y.toFixed(1)}, ${camTele.worldPosition.z.toFixed(1)})`;
-    elCamPitch.textContent = `${camTele.pitchDeg.toFixed(1)}° (Downward)`;
-    elCamYaw.textContent = `${camTele.yawDeg.toFixed(1)}°`;
-    elCamTarget.textContent = `(${camTele.lookTarget.x.toFixed(1)}, ${camTele.lookTarget.y.toFixed(1)}, ${camTele.lookTarget.z.toFixed(1)})`;
-    elCamBoatDist.textContent = `${camTele.distanceToBoat.toFixed(1)} m`;
-    elCamHeight.textContent = `${camTele.heightAboveWater.toFixed(1)} m`;
-    elBoatPos.textContent = `(${bPos.x.toFixed(1)}, ${bPos.y.toFixed(1)}, ${bPos.z.toFixed(1)})`;
-
-    // Auto-loop test when reaching end
+    // Auto-loop when reaching end of river
     if (dist >= totalLength) {
       setTimeout(() => {
         restartBoat();
@@ -177,5 +202,5 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  console.log('Little Paper Boat — Reconstructed Elevated Camera initialized.');
+  console.log('Little Paper Boat — Phase 3 Stylized Hand-Painted 3D Environment initialized.');
 });

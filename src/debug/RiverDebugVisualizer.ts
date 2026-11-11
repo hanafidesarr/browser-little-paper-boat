@@ -7,7 +7,7 @@ import { BoatController } from '../boat/BoatController';
 export class RiverDebugVisualizer {
   private app: pc.AppBase;
   private river: RiverSystem;
-  private enabled: boolean = true;
+  private enabled: boolean = false;
   private rootEntity: pc.Entity;
 
   // Colors
@@ -47,6 +47,7 @@ export class RiverDebugVisualizer {
 
     this.rebuildControlPointMarkers();
     this.cacheSamples();
+    this.rootEntity.enabled = this.enabled;
   }
 
   public rebuildControlPointMarkers(): void {

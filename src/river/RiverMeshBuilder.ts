@@ -451,53 +451,59 @@ export class RiverMeshBuilder {
     const mat = new pc.StandardMaterial();
 
     // Procedural hand-painted riverbank cross-section:
-    // Outer grass -> mossy transition -> rich brown dirt bluff -> wet dark clay -> waterline silt
+    // Bright vibrant meadow plateau -> sunlit grass -> smooth light brown (coklat muda) earth transition -> waterline sand
     const size = 512;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = 256;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Stylized Meadow & Warm Earth Gradient across the river profile
-    // Palette: Meadow Green #78B96B, Grass Green #9ACB72, Warm Soil #875D35
+    // 1. Bright Vibrant Meadow & Light Brown (Coklat Muda) Earth Transition
     const grad = ctx.createLinearGradient(0, 0, size, 0);
-    grad.addColorStop(0.00, '#78B96B'); // Outer Meadow Green plateau
-    grad.addColorStop(0.14, '#9ACB72'); // Grass Green upper crest
-    grad.addColorStop(0.22, '#86BC68'); // Soft embankment crest
-    grad.addColorStop(0.28, '#8C8644'); // Warm mossy soil transition
-    grad.addColorStop(0.34, '#875D35'); // Warm brown soil / dirt bluff
-    grad.addColorStop(0.40, '#6E4924'); // Stratified cutbank earth
-    grad.addColorStop(0.46, '#52361B'); // Wet shoreline dark clay
-    grad.addColorStop(0.50, '#7A6648'); // Silt & sand lip at waterline
-    // Right side mirror
-    grad.addColorStop(0.54, '#52361B'); // Wet shoreline dark clay
-    grad.addColorStop(0.60, '#6E4924'); // Stratified cutbank earth
-    grad.addColorStop(0.66, '#875D35'); // Warm brown soil / dirt bluff
-    grad.addColorStop(0.72, '#8C8644'); // Warm mossy soil transition
-    grad.addColorStop(0.78, '#86BC68'); // Soft embankment crest
-    grad.addColorStop(0.86, '#9ACB72'); // Grass Green upper crest
-    grad.addColorStop(1.00, '#78B96B'); // Outer Meadow Green plateau
+    // Left Bank: Outer Plateau -> Upper Crest -> Coklat Muda Transition -> Waterline Sand Lip
+    grad.addColorStop(0.00, '#66DE48'); // Bright vibrant meadow green
+    grad.addColorStop(0.12, '#7EEC56'); // Bright sunlit grass plateau
+    grad.addColorStop(0.18, '#9EEE5E'); // Grass crest edge
+    grad.addColorStop(0.22, '#C4D86E'); // Soft mossy crest transition
+    grad.addColorStop(0.26, '#D6B472'); // Coklat muda: warm light honey brown
+    grad.addColorStop(0.32, '#CA9C5E'); // Coklat muda: light caramel earth
+    grad.addColorStop(0.38, '#BE8E52'); // Coklat muda: light brown bluff
+    grad.addColorStop(0.44, '#C89A5C'); // Coklat muda: warm light clay
+    grad.addColorStop(0.48, '#D8B076'); // Coklat muda: bright golden-sand lip
+    grad.addColorStop(0.50, '#E2C28E'); // Waterline light sand contact
+
+    // Right Bank: Mirror from Waterline to Outer Plateau
+    grad.addColorStop(0.50, '#E2C28E'); // Waterline light sand contact
+    grad.addColorStop(0.52, '#D8B076'); // Coklat muda: bright golden-sand lip
+    grad.addColorStop(0.56, '#C89A5C'); // Coklat muda: warm light clay
+    grad.addColorStop(0.62, '#BE8E52'); // Coklat muda: light brown bluff
+    grad.addColorStop(0.68, '#CA9C5E'); // Coklat muda: light caramel earth
+    grad.addColorStop(0.74, '#D6B472'); // Coklat muda: warm light honey brown
+    grad.addColorStop(0.78, '#C4D86E'); // Soft mossy crest transition
+    grad.addColorStop(0.82, '#9EEE5E'); // Grass crest edge
+    grad.addColorStop(0.88, '#7EEC56'); // Bright sunlit grass plateau
+    grad.addColorStop(1.00, '#66DE48'); // Bright vibrant meadow green
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, 256);
 
-    // 2. Stratified Warm Earth Layers and Soft Silt on the cutbank zones
-    ctx.fillStyle = 'rgba(60, 36, 16, 0.20)';
-    for (let i = 0; i < 35; i++) {
+    // 2. Delicate Warm Light Caramel Striations on the Coklat Muda cutbank zones
+    ctx.fillStyle = 'rgba(165, 115, 65, 0.20)';
+    for (let i = 0; i < 40; i++) {
       const y = Math.random() * 256;
-      const xLeft = 145 + Math.random() * 85;
-      const xRight = 282 + Math.random() * 85;
+      const xLeft = 120 + Math.random() * 125;
+      const xRight = 267 + Math.random() * 125;
       const w = 20 + Math.random() * 45;
       ctx.fillRect(xLeft, y, w, 2.5);
       ctx.fillRect(xRight, y, w, 2.5);
     }
 
-    // 3. Natural Organic Dirt Pebbles & Small River Stones
-    ctx.fillStyle = 'rgba(195, 175, 140, 0.38)';
+    // 3. Natural Light Sand Pebbles & Small River Stones (Coklat Muda & Cream)
+    ctx.fillStyle = 'rgba(235, 215, 175, 0.45)';
     for (let j = 0; j < 65; j++) {
       const y = Math.random() * 256;
-      const xLeft = 160 + Math.random() * 80;
-      const xRight = 270 + Math.random() * 80;
+      const xLeft = 135 + Math.random() * 110;
+      const xRight = 267 + Math.random() * 110;
       const r = 1.2 + Math.random() * 2.2;
       ctx.beginPath();
       ctx.arc(xLeft, y, r, 0, Math.PI * 2);
@@ -505,13 +511,13 @@ export class RiverMeshBuilder {
       ctx.fill();
     }
 
-    // 4. Stylized Wildflower Sprinkles on the Meadow Plateaus (#F7D66A & #F4F1E5)
+    // 4. Stylized Wildflower Sprinkles on the Bright Meadow Plateaus (#FFE066 & #FFF6D0)
     for (let k = 0; k < 60; k++) {
       const y = Math.random() * 256;
       const isLeft = Math.random() > 0.5;
-      const x = isLeft ? Math.random() * 95 : 417 + Math.random() * 95;
+      const x = isLeft ? Math.random() * 90 : 422 + Math.random() * 90;
       const isWhite = Math.random() > 0.5;
-      ctx.fillStyle = isWhite ? '#F4F1E5' : '#F7D66A';
+      ctx.fillStyle = isWhite ? '#FFF6D0' : '#FFE066';
       ctx.beginPath();
       ctx.arc(x, y, 1.6 + Math.random() * 1.4, 0, Math.PI * 2);
       ctx.fill();
@@ -529,11 +535,20 @@ export class RiverMeshBuilder {
     });
     texture.setSource(canvas);
 
-    mat.diffuse = customTint ?? new pc.Color(1.0, 1.0, 1.0);
+    if (customTint) {
+      // Gentle atmospheric tinting (82% texture true color, 18% level ambiance) so brown soil stays cleanly brown and grass stays bright
+      mat.diffuse = new pc.Color(
+        0.82 + customTint.r * 0.18,
+        0.82 + customTint.g * 0.18,
+        0.82 + customTint.b * 0.18
+      );
+    } else {
+      mat.diffuse = new pc.Color(1.0, 1.0, 1.0);
+    }
     mat.diffuseMap = texture;
-    mat.ambient = new pc.Color(0.35, 0.42, 0.32);
-    mat.specular = new pc.Color(0.04, 0.04, 0.04);
-    mat.shininess = 8;
+    mat.ambient = new pc.Color(0.68, 0.76, 0.62); // Fresh, bright daylight ambient response
+    mat.specular = new pc.Color(0.06, 0.08, 0.05);
+    mat.shininess = 12;
     mat.cull = pc.CULLFACE_NONE;
     mat.update();
     return mat;

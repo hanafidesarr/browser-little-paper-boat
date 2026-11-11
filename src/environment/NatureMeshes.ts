@@ -41,19 +41,19 @@ export class NatureMeshes {
     this.birchTrunkMat.update();
 
     this.foliageMatMeadow = new pc.StandardMaterial();
-    this.foliageMatMeadow.diffuse = new pc.Color(0.471, 0.725, 0.420); // #78B96B Meadow Green
-    this.foliageMatMeadow.ambient = new pc.Color(0.32, 0.52, 0.28);
+    this.foliageMatMeadow.diffuse = new pc.Color(0.55, 0.85, 0.46); // Bright Stylized Meadow Green
+    this.foliageMatMeadow.ambient = new pc.Color(0.42, 0.65, 0.35);
     this.foliageMatMeadow.shininess = 16;
     this.foliageMatMeadow.update();
 
     this.foliageMatGrass = new pc.StandardMaterial();
-    this.foliageMatGrass.diffuse = new pc.Color(0.604, 0.796, 0.447); // #9ACB72 Grass Green
-    this.foliageMatGrass.ambient = new pc.Color(0.42, 0.58, 0.32);
+    this.foliageMatGrass.diffuse = new pc.Color(0.68, 0.90, 0.50); // Bright Sunlit Grass Green
+    this.foliageMatGrass.ambient = new pc.Color(0.50, 0.70, 0.38);
     this.foliageMatGrass.update();
 
     this.foliageMatDeep = new pc.StandardMaterial();
-    this.foliageMatDeep.diffuse = new pc.Color(0.278, 0.486, 0.322); // #477C52 Deep Forest Green
-    this.foliageMatDeep.ambient = new pc.Color(0.18, 0.35, 0.22);
+    this.foliageMatDeep.diffuse = new pc.Color(0.36, 0.62, 0.40); // Soft Emerald Green
+    this.foliageMatDeep.ambient = new pc.Color(0.26, 0.46, 0.30);
     this.foliageMatDeep.update();
 
     this.foliageMatAutumnOrange = new pc.StandardMaterial();
@@ -107,13 +107,13 @@ export class NatureMeshes {
     this.flowerCenterMat.update();
 
     this.grassMat = new pc.StandardMaterial();
-    this.grassMat.diffuse = new pc.Color(0.54, 0.75, 0.40); // Lush meadow grass
-    this.grassMat.ambient = new pc.Color(0.35, 0.52, 0.26);
+    this.grassMat.diffuse = new pc.Color(0.64, 0.88, 0.48); // Bright sunny grass
+    this.grassMat.ambient = new pc.Color(0.45, 0.66, 0.34);
     this.grassMat.update();
 
     this.bushMat = new pc.StandardMaterial();
-    this.bushMat.diffuse = new pc.Color(0.42, 0.66, 0.36);
-    this.bushMat.ambient = new pc.Color(0.28, 0.46, 0.24);
+    this.bushMat.diffuse = new pc.Color(0.52, 0.80, 0.44); // Bright stylized bush
+    this.bushMat.ambient = new pc.Color(0.38, 0.60, 0.32);
     this.bushMat.update();
 
     this.woodBridgeMat = new pc.StandardMaterial();

@@ -21,10 +21,13 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { position: new pc.Vec3(0, 0, 190), width: 8.5, current: 4.0 }
     ],
     obstacles: [
-      { distance: 35, lateralOffset: -1.8, type: 'rock', radius: 0.8 },
-      { distance: 70, lateralOffset: 2.0, type: 'rock', radius: 0.9 },
-      { distance: 110, lateralOffset: -1.5, type: 'branch', radius: 1.2 },
-      { distance: 145, lateralOffset: 1.8, type: 'rock', radius: 0.8 }
+      { distance: 22, lateralOffset: 0.8, type: 'duck', radius: 0.8 },
+      { distance: 42, lateralOffset: -1.8, type: 'rock', radius: 0.85 },
+      { distance: 68, lateralOffset: 0.5, type: 'fish', radius: 0.7 },
+      { distance: 92, lateralOffset: 1.8, type: 'branch', radius: 1.2 },
+      { distance: 118, lateralOffset: -0.6, type: 'lily_pads', radius: 1.3 },
+      { distance: 140, lateralOffset: 1.5, type: 'frog', radius: 0.7 },
+      { distance: 162, lateralOffset: 0.0, type: 'waterfall_zone', radius: 2.8 }
     ],
     collectibles: [
       { distance: 15, lateralOffset: 0.0, type: 'golden_leaf' },
@@ -72,11 +75,12 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { position: new pc.Vec3(0, 0, 220), width: 9.0, current: 4.2 }
     ],
     obstacles: [
-      { distance: 38, lateralOffset: -1.5, type: 'frog', radius: 0.7 },
-      { distance: 75, lateralOffset: 2.2, type: 'rock', radius: 0.9 },
-      { distance: 115, lateralOffset: -2.0, type: 'frog', radius: 0.7 },
-      { distance: 150, lateralOffset: 1.6, type: 'rock', radius: 0.8 },
-      { distance: 180, lateralOffset: -1.2, type: 'frog', radius: 0.7 }
+      { distance: 28, lateralOffset: -1.2, type: 'duck', radius: 0.8 },
+      { distance: 55, lateralOffset: 1.5, type: 'whirlpool', radius: 2.2 },
+      { distance: 88, lateralOffset: -1.6, type: 'lily_pads', radius: 1.3 },
+      { distance: 115, lateralOffset: 1.8, type: 'fish', radius: 0.7 },
+      { distance: 145, lateralOffset: -1.8, type: 'frog', radius: 0.7 },
+      { distance: 175, lateralOffset: 1.6, type: 'rock', radius: 0.85 }
     ],
     collectibles: [
       { distance: 18, lateralOffset: -1.2, type: 'lily_flower' },

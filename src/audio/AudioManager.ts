@@ -243,6 +243,114 @@ export class AudioManager {
   }
 
   // ==========================================
+  // SFX: Checkpoint Bell / Lantern Chime
+  // ==========================================
+  public playCheckpointSound(): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    const t = this.ctx.currentTime;
+    // Warm Tibetan Singing Bowl / Temple Bell Chord (A4, E5, A5)
+    const freqs = [440.0, 659.25, 880.0];
+
+    freqs.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.14 / (idx + 1), t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 2.3);
+    });
+  }
+
+  // ==========================================
+  // SFX: Obstacle Impact / Soft Damage Thud
+  // ==========================================
+  public playDamageThud(): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const noise = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
+
+    // Low hollow water thud
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.22);
+
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.26);
+  }
+
+  // ==========================================
+  // SFX: Cute Animal Voices (Duck / Frog / Fish)
+  // ==========================================
+  public playAnimalQuack(): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(480, t);
+    osc.frequency.linearRampToValueAtTime(320, t + 0.12);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(650, t);
+    filter.Q.setValueAtTime(3.0, t);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.08, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.16);
+  }
+
+  public playAnimalRibbit(): void {
+    if (!this.ctx || !this.sfxGain) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, t);
+    osc.frequency.exponentialRampToValueAtTime(260, t + 0.06);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.14);
+
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.linearRampToValueAtTime(0.09, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.18);
+  }
+
+  // ==========================================
   // SFX: Level Completed Fanfare
   // ==========================================
   public playWinFanfare(): void {

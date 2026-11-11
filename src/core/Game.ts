@@ -6,6 +6,8 @@ import { EnvironmentManager } from '../environment/EnvironmentManager';
 import { WeatherEffects } from '../environment/WeatherEffects';
 import { ObstacleManager } from '../obstacles/ObstacleManager';
 import { CollectibleManager } from '../collectibles/CollectibleManager';
+import { CheckpointManager } from '../checkpoints/CheckpointManager';
+import { EffectManager } from '../particles/EffectManager';
 import { LevelManager } from '../levels/LevelManager';
 import { ProgressionManager } from '../progression/ProgressionManager';
 import { AudioManager } from '../audio/AudioManager';
@@ -21,10 +23,12 @@ export class Game {
   private camera: RiverFollowCamera;
   private environment: EnvironmentManager;
   private weather: WeatherEffects;
+  private effects: EffectManager;
+  private audio: AudioManager;
   private obstacles: ObstacleManager;
   private collectibles: CollectibleManager;
+  private checkpoints: CheckpointManager;
   private levelManager: LevelManager;
-  private audio: AudioManager;
   private ui: UIManager;
 
   private sunLight: pc.Entity;
@@ -52,7 +56,7 @@ export class Game {
     this.sunLight.addComponent('light', {
       type: 'directional',
       color: new pc.Color(1.0, 0.96, 0.88),
-      intensity: 1.3
+      intensity: 1.35
     });
     this.sunLight.setEulerAngles(45, 30, 0);
     this.app.root.addChild(this.sunLight);
@@ -61,19 +65,22 @@ export class Game {
     ambientFill.addComponent('light', {
       type: 'directional',
       color: new pc.Color(0.7, 0.82, 0.95),
-      intensity: 0.5
+      intensity: 0.55
     });
     ambientFill.setEulerAngles(-60, 150, 0);
     this.app.root.addChild(ambientFill);
 
     // 3. Subsystems
+    this.audio = new AudioManager();
+    this.effects = new EffectManager(this.app);
     this.river = new RiverSystem(this.app);
     this.boat = new BoatController(this.app, this.river);
     this.camera = new RiverFollowCamera(this.app, this.river, this.boat);
     this.environment = new EnvironmentManager(this.app, this.river);
     this.weather = new WeatherEffects(this.app);
-    this.obstacles = new ObstacleManager(this.app, this.river);
-    this.collectibles = new CollectibleManager(this.app, this.river);
+    this.obstacles = new ObstacleManager(this.app, this.river, this.effects, this.audio);
+    this.collectibles = new CollectibleManager(this.app, this.river, this.effects, this.audio);
+    this.checkpoints = new CheckpointManager(this.app, this.river, this.boat, this.effects, this.audio);
 
     this.levelManager = new LevelManager(
       this.app,
@@ -83,11 +90,12 @@ export class Game {
       this.weather,
       this.obstacles,
       this.collectibles,
+      this.checkpoints,
+      this.effects,
       this.sunLight,
       this.camera.getEntity()
     );
 
-    this.audio = new AudioManager();
     this.ui = new UIManager(this.audio);
 
     this.setupInteractions();
@@ -101,13 +109,26 @@ export class Game {
   private setupInteractions(): void {
     // Collectible picked up
     this.collectibles.onCollectCallback = (collected, total) => {
-      this.audio.playCollectSound();
       this.ui.updateCollectibles(collected, total);
     };
 
-    // Obstacle bumped
-    this.obstacles.onObstacleBump = () => {
-      this.audio.playWaterSplash();
+    // Boat integrity / damage changed
+    this.boat.onIntegrityChange = (current, max) => {
+      this.ui.updateIntegrity(current, max);
+    };
+
+    // Boat sank (integrity depleted)
+    this.boat.onBoatSink = () => {
+      this.ui.showCheckpointBanner('Origami unfolding... Restoring at lantern 🏮');
+      setTimeout(() => {
+        this.checkpoints.respawnBoatAtLastCheckpoint();
+        this.camera.reset();
+      }, 900);
+    };
+
+    // Checkpoint crossed
+    this.checkpoints.onCheckpointReached = () => {
+      this.ui.showCheckpointBanner('🏮 Lantern Checkpoint Reached');
     };
 
     // Level finished
@@ -154,6 +175,7 @@ export class Game {
       cfg.subtitle,
       cfg.collectibles.length
     );
+    this.ui.updateIntegrity(this.boat.maxIntegrity, this.boat.maxIntegrity);
   }
 
   private startLoop(): void {
@@ -163,8 +185,10 @@ export class Game {
         this.camera.update(dt);
         this.environment.update(dt);
         this.weather.update(dt, this.boat.getPosition());
+        this.effects.update(dt);
         this.obstacles.update(dt, this.boat);
-        this.collectibles.update(dt, this.boat.getDistance(), this.boat.getLateralOffset());
+        this.collectibles.update(dt, this.boat);
+        this.checkpoints.update(dt);
         this.levelManager.update(dt);
 
         // Update progress bar
@@ -175,6 +199,7 @@ export class Game {
         // Slow peaceful camera panning in menu
         this.camera.update(dt * 0.4);
         this.environment.update(dt);
+        this.effects.update(dt);
         this.levelManager.update(dt * 0.4);
       }
     });

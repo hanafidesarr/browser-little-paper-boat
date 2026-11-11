@@ -1,5 +1,8 @@
 import * as pc from 'playcanvas';
 import { RiverSystem } from '../river/RiverSystem';
+import { BoatController } from '../boat/BoatController';
+import { EffectManager } from '../particles/EffectManager';
+import { AudioManager } from '../audio/AudioManager';
 import { CollectibleEntity, CollectibleType } from './CollectibleEntity';
 
 export interface CollectibleSpawn {
@@ -11,15 +14,26 @@ export interface CollectibleSpawn {
 export class CollectibleManager {
   private app: pc.AppBase;
   private river: RiverSystem;
+  private effects: EffectManager;
+  private audio: AudioManager;
   private rootEntity: pc.Entity;
   private items: CollectibleEntity[] = [];
+
   private collectedCount: number = 0;
   private totalCount: number = 0;
+
   public onCollectCallback: ((collected: number, total: number) => void) | null = null;
 
-  constructor(app: pc.AppBase, river: RiverSystem) {
+  constructor(
+    app: pc.AppBase,
+    river: RiverSystem,
+    effects: EffectManager,
+    audio: AudioManager
+  ) {
     this.app = app;
     this.river = river;
+    this.effects = effects;
+    this.audio = audio;
     this.rootEntity = new pc.Entity('CollectiblesRoot');
     this.app.root.addChild(this.rootEntity);
   }
@@ -37,33 +51,45 @@ export class CollectibleManager {
         s.type ?? 'golden_leaf'
       );
 
-      const pos = this.river.riverToWorld(s.distance, s.lateralOffset, 0.35);
-      item.entity.setPosition(pos);
+      const pos = this.river.riverToWorld(s.distance, s.lateralOffset, 0.38);
+      item.setInitialPosition(pos);
       this.rootEntity.addChild(item.entity);
       this.items.push(item);
     }
   }
 
-  public update(dt: number, boatDistance: number, boatLateral: number): void {
-    const pickupRadius = 1.3;
+  public update(dt: number, boat: BoatController): void {
+    const boatPos = boat.getPosition();
+    const boatDist = boat.getDistance();
+    const boatLat = boat.getLateralOffset();
+    const pickupRadius = 1.35;
 
     for (let i = 0; i < this.items.length; i++) {
       const item = this.items[i];
-      if (item.collected) continue;
+      if (item.collected) {
+        item.update(dt, boatPos);
+        continue;
+      }
 
-      item.update(dt);
+      item.update(dt, boatPos);
 
-      // Distance check along river
-      const distDelta = Math.abs(item.distance - boatDistance);
-      if (distDelta < pickupRadius) {
-        const latDelta = Math.abs(item.lateralOffset - boatLateral);
-        if (latDelta < pickupRadius) {
-          // Collect!
-          item.triggerCollect();
-          this.collectedCount++;
-          if (this.onCollectCallback) {
-            this.onCollectCallback(this.collectedCount, this.totalCount);
-          }
+      // Distance check along river coordinates
+      const distDelta = Math.abs(item.distance - boatDist);
+      const latDelta = Math.abs(item.lateralOffset - boatLat);
+
+      if (distDelta < pickupRadius && latDelta < pickupRadius) {
+        // Collect!
+        item.triggerCollect();
+        this.collectedCount++;
+
+        // Effects & Chime
+        const itemPos = item.entity.getPosition();
+        this.effects.spawnSparkles(itemPos, item.getColor(), 10);
+        this.effects.spawnSplash(itemPos, 1.2);
+        this.audio.playCollectSound();
+
+        if (this.onCollectCallback) {
+          this.onCollectCallback(this.collectedCount, this.totalCount);
         }
       }
     }
@@ -84,5 +110,10 @@ export class CollectibleManager {
     this.items = [];
     this.collectedCount = 0;
     this.totalCount = 0;
+  }
+
+  public destroy(): void {
+    this.clear();
+    this.rootEntity.destroy();
   }
 }

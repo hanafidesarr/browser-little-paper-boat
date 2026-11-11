@@ -23,6 +23,9 @@ export class UIManager {
   private hudLevelSubtitle!: HTMLElement;
   private hudCollectibleBadge!: HTMLElement;
   private hudProgressBar!: HTMLElement;
+  private hudIntegrityEl!: HTMLElement;
+  private hudCheckpointBannerEl!: HTMLElement;
+  private bannerTimeout: any = null;
 
   // Result elements
   private resultStarsEl!: HTMLElement;
@@ -76,10 +79,12 @@ export class UIManager {
             <div id="hud-subtitle" class="hud-level-subtitle">A gentle dawn awakening</div>
           </div>
           <div class="hud-badges">
+            <div id="hud-integrity" class="hud-integrity">⛵ ⛵ ⛵</div>
             <div id="hud-collectible" class="hud-badge">🌸 0 / 10</div>
             <button id="btn-pause" class="hud-pause-btn" title="Pause">⏸</button>
           </div>
         </div>
+        <div id="hud-checkpoint-banner" class="hud-checkpoint-banner">🏮 Lantern Checkpoint Reached</div>
         <div class="hud-bottom">
           <div class="progress-container">
             <div id="hud-progress-bar" class="progress-bar"></div>
@@ -180,6 +185,8 @@ export class UIManager {
     this.hudLevelSubtitle = document.getElementById('hud-subtitle')!;
     this.hudCollectibleBadge = document.getElementById('hud-collectible')!;
     this.hudProgressBar = document.getElementById('hud-progress-bar')!;
+    this.hudIntegrityEl = document.getElementById('hud-integrity')!;
+    this.hudCheckpointBannerEl = document.getElementById('hud-checkpoint-banner')!;
 
     this.resultStarsEl = document.getElementById('result-stars')!;
     this.resultScoreEl = document.getElementById('result-score')!;
@@ -347,7 +354,26 @@ export class UIManager {
     this.hudLevelTitle.textContent = title;
     this.hudLevelSubtitle.textContent = subtitle;
     this.updateCollectibles(0, totalCollectibles);
+    this.updateIntegrity(3, 3);
     this.updateProgress(0);
+  }
+
+  public updateIntegrity(current: number, max: number): void {
+    let str = '';
+    for (let i = 1; i <= max; i++) {
+      str += i <= current ? '⛵ ' : '🤍 ';
+    }
+    this.hudIntegrityEl.textContent = str.trim();
+  }
+
+  public showCheckpointBanner(text: string = '🏮 Lantern Checkpoint Reached'): void {
+    this.hudCheckpointBannerEl.textContent = text;
+    this.hudCheckpointBannerEl.classList.add('show');
+
+    if (this.bannerTimeout) clearTimeout(this.bannerTimeout);
+    this.bannerTimeout = setTimeout(() => {
+      this.hudCheckpointBannerEl.classList.remove('show');
+    }, 2400);
   }
 
   public updateCollectibles(collected: number, total: number): void {

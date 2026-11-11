@@ -24,6 +24,15 @@ export class BoatController {
   private lateralVelocity: number = 0;
   private baseSpeed: number = GameConfig.BOAT.DEFAULT_SPEED;
   private currentForwardSpeed: number = GameConfig.BOAT.DEFAULT_SPEED;
+  private speedModifier: number = 1.0;
+  private speedModifierTimer: number = 0;
+  private externalSpinTorque: number = 0;
+
+  // Paper Integrity & Health State
+  public readonly maxIntegrity: number = 3;
+  private currentIntegrity: number = 3;
+  private invulnerabilityTimer: number = 0;
+  private isSunk: boolean = false;
 
   // Animation Timing
   private animTimer: number = 0;
@@ -39,8 +48,10 @@ export class BoatController {
   // Wake & Ripples
   private rippleEntity: pc.Entity;
 
-  // Collision Callback
+  // Callbacks
   public onBankBump: ((side: 'left' | 'right', velocity: number) => void) | null = null;
+  public onIntegrityChange: ((current: number, max: number) => void) | null = null;
+  public onBoatSink: (() => void) | null = null;
 
   constructor(app: pc.AppBase, river: RiverSystem) {
     this.app = app;
@@ -179,6 +190,9 @@ export class BoatController {
     this.distance = distance;
     this.lateralOffset = lateral;
     this.lateralVelocity = 0;
+    this.externalSpinTorque = 0;
+    this.speedModifier = 1.0;
+    this.speedModifierTimer = 0;
     this.updateTransform(0);
   }
 
@@ -186,12 +200,39 @@ export class BoatController {
     if (dt <= 0) return;
     this.animTimer += dt;
 
+    if (this.isSunk) {
+      // Boat is softly waterlogged/sunk, waiting for respawn
+      return;
+    }
+
+    // 0. Timers
+    if (this.invulnerabilityTimer > 0) {
+      this.invulnerabilityTimer -= dt;
+      // Soft blinking visual feedback during invulnerability
+      const blink = Math.floor(this.invulnerabilityTimer * 12) % 2 === 0;
+      this.visualRoot.enabled = blink;
+      if (this.invulnerabilityTimer <= 0) {
+        this.visualRoot.enabled = true;
+      }
+    }
+
+    if (this.speedModifierTimer > 0) {
+      this.speedModifierTimer -= dt;
+      if (this.speedModifierTimer <= 0) {
+        this.speedModifier = 1.0;
+      }
+    }
+
+    if (Math.abs(this.externalSpinTorque) > 0.01) {
+      this.externalSpinTorque -= this.externalSpinTorque * 3.0 * dt;
+    }
+
     // 1. Spline sample at current distance
     const frame = this.river.getFrameAtDistance(this.distance);
 
-    // 2. Current assistance & forward speed
+    // 2. Current assistance & forward speed (boosted/slowed by speedModifier)
     const currentMultiplier = frame.current > 0 ? (frame.current / 5.0) : 1.0;
-    this.currentForwardSpeed = this.baseSpeed * currentMultiplier;
+    this.currentForwardSpeed = this.baseSpeed * currentMultiplier * this.speedModifier;
     this.distance += this.currentForwardSpeed * dt;
 
     const totalLength = this.river.getTotalLength();
@@ -265,10 +306,10 @@ export class BoatController {
     );
     this.logicalNode.setPosition(logicalPos);
 
-    // Logical Orientation: Tangent + steering yaw bias
+    // Logical Orientation: Tangent + steering yaw bias + external spin torque
     const forward = frame.tangent.clone();
-    if (Math.abs(this.lateralVelocity) > 0.05) {
-      const turnBias = (this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * 0.22;
+    if (Math.abs(this.lateralVelocity) > 0.05 || Math.abs(this.externalSpinTorque) > 0.05) {
+      const turnBias = (this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * 0.22 + this.externalSpinTorque * 0.3;
       forward.add(frame.normal.clone().mulScalar(turnBias)).normalize();
     }
 
@@ -284,7 +325,7 @@ export class BoatController {
     const bob = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_BOB_FREQ) * GameConfig.BOAT.FLOAT_BOB_AMP;
     this.visualRoot.setLocalPosition(0, bob, 0);
 
-    // 2. Dynamic Banking roll into turns + wave rocking (pitch & roll)
+    // 2. Dynamic Banking roll into turns + wave rocking (pitch & roll) + spin
     const bankAngle = -(this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * GameConfig.BOAT.BANK_ANGLE_MAX;
     const waveRoll = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_ROLL_FREQ) * GameConfig.BOAT.FLOAT_ROLL_AMP;
     const wavePitch = Math.cos(this.animTimer * GameConfig.BOAT.FLOAT_PITCH_FREQ) * GameConfig.BOAT.FLOAT_PITCH_AMP;
@@ -300,6 +341,85 @@ export class BoatController {
       const pulse = 1.0 + Math.sin(this.animTimer * 4.2) * 0.12;
       this.rippleEntity.setLocalScale(1.8 * pulse, 1.0, 2.5 * pulse);
     }
+  }
+
+  // ==========================================
+  // PAPER BOAT INTEGRITY & DAMAGE SYSTEM
+  // ==========================================
+
+  public getIntegrity(): number {
+    return this.currentIntegrity;
+  }
+
+  public isInvulnerable(): boolean {
+    return this.invulnerabilityTimer > 0;
+  }
+
+  public takeDamage(amount: number = 1): boolean {
+    if (this.invulnerabilityTimer > 0 || this.isSunk) {
+      return false; // Safely protected by invulnerability frames
+    }
+
+    this.currentIntegrity = Math.max(0, this.currentIntegrity - amount);
+    this.invulnerabilityTimer = 1.4; // 1.4s forgiving cooldown
+
+    // Momentary deceleration
+    this.speedModifier = 0.65;
+    this.speedModifierTimer = 0.6;
+
+    // Soft jiggle tremor
+    this.visualRoot.setLocalEulerAngles(6, 0, -8);
+
+    if (this.onIntegrityChange) {
+      this.onIntegrityChange(this.currentIntegrity, this.maxIntegrity);
+    }
+
+    if (this.currentIntegrity <= 0) {
+      this.handleBoatSink();
+    }
+
+    return true;
+  }
+
+  public heal(amount: number = 1): void {
+    this.currentIntegrity = Math.min(this.maxIntegrity, this.currentIntegrity + amount);
+    if (this.onIntegrityChange) {
+      this.onIntegrityChange(this.currentIntegrity, this.maxIntegrity);
+    }
+  }
+
+  private handleBoatSink(): void {
+    this.isSunk = true;
+    this.visualRoot.enabled = false;
+
+    if (this.onBoatSink) {
+      this.onBoatSink();
+    }
+  }
+
+  public respawnAt(distance: number, lateral: number = 0): void {
+    this.isSunk = false;
+    this.currentIntegrity = this.maxIntegrity;
+    this.invulnerabilityTimer = 2.0; // Extra grace period on respawn
+    this.visualRoot.enabled = true;
+    this.setPosition(distance, lateral);
+
+    if (this.onIntegrityChange) {
+      this.onIntegrityChange(this.currentIntegrity, this.maxIntegrity);
+    }
+  }
+
+  // ==========================================
+  // EXTERNAL CURRENT & WHIRLPOOL FORCES
+  // ==========================================
+
+  public applyExternalSpeedMultiplier(mult: number, duration: number = 0.4): void {
+    this.speedModifier = mult;
+    this.speedModifierTimer = duration;
+  }
+
+  public applySpinTorque(torque: number): void {
+    this.externalSpinTorque = torque;
   }
 
   // ==========================================

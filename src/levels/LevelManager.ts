@@ -5,6 +5,8 @@ import { EnvironmentManager } from '../environment/EnvironmentManager';
 import { WeatherEffects } from '../environment/WeatherEffects';
 import { ObstacleManager } from '../obstacles/ObstacleManager';
 import { CollectibleManager } from '../collectibles/CollectibleManager';
+import { CheckpointManager } from '../checkpoints/CheckpointManager';
+import { EffectManager } from '../particles/EffectManager';
 import { FinishGate } from '../environment/FinishGate';
 import { WaterMaterial } from '../water/WaterMaterial';
 import { LEVEL_DATA } from './LevelData';
@@ -18,6 +20,8 @@ export class LevelManager {
   private weather: WeatherEffects;
   private obstacles: ObstacleManager;
   private collectibles: CollectibleManager;
+  private checkpoints: CheckpointManager;
+  private effects: EffectManager;
 
   private currentLevelId: number = 1;
   private currentConfig: LevelConfig = LEVEL_DATA[1];
@@ -39,6 +43,8 @@ export class LevelManager {
     weather: WeatherEffects,
     obstacles: ObstacleManager,
     collectibles: CollectibleManager,
+    checkpoints: CheckpointManager,
+    effects: EffectManager,
     sunLight: pc.Entity,
     cameraEntity: pc.Entity
   ) {
@@ -49,6 +55,8 @@ export class LevelManager {
     this.weather = weather;
     this.obstacles = obstacles;
     this.collectibles = collectibles;
+    this.checkpoints = checkpoints;
+    this.effects = effects;
     this.sunLight = sunLight;
     this.cameraEntity = cameraEntity;
   }
@@ -115,7 +123,10 @@ export class LevelManager {
     this.obstacles.spawnObstacles(config.obstacles);
     this.collectibles.spawnItems(config.collectibles);
 
-    // 7. Destination Finish Gate
+    // 7. Initialize River Checkpoints
+    this.checkpoints.initCheckpoints();
+
+    // 8. Destination Finish Gate
     if (this.finishGate) {
       this.finishGate.destroy();
     }
@@ -141,6 +152,9 @@ export class LevelManager {
 
       if (boatDist >= finishDist) {
         this.hasTriggeredFinish = true;
+        if (this.finishGate) {
+          this.finishGate.celebrate(this.effects);
+        }
         if (this.onLevelFinish) {
           this.onLevelFinish(
             this.currentLevelId,

@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Little Paper Boat — Phase 3 Stylized 3D Environment</title>
+  <title>Little Paper Boat — Cozy 3D Browser Adventure</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Yomogi&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/ui/styles.css">
   <style>
     * {
       box-sizing: border-box;
@@ -32,7 +33,7 @@
       top: 0;
       z-index: 1;
     }
-    #phase3-overlay {
+    #ui-container {
       position: absolute;
       left: 0;
       top: 0;
@@ -40,189 +41,12 @@
       height: 100%;
       z-index: 10;
       pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 16px 20px;
-    }
-    .hud-card {
-      pointer-events: auto;
-      background: rgba(253, 251, 247, 0.94);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 2px solid rgba(255, 255, 255, 0.88);
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(25, 45, 30, 0.16);
-      padding: 14px 18px;
-      color: #244234;
-      max-width: 440px;
-    }
-    .hud-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 2px;
-    }
-    .hud-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #1e5233;
-    }
-    .phase-tag {
-      background: #e8f5ec;
-      border: 1px solid #99cda8;
-      color: #1c5e34;
-      font-size: 0.76rem;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 10px;
-    }
-    .hud-sub {
-      font-size: 0.84rem;
-      color: #557762;
-      margin-bottom: 8px;
-    }
-    .section-banner {
-      display: inline-block;
-      background: #e2f0e6;
-      border-left: 4px solid #2d7a46;
-      color: #1c5e34;
-      font-size: 0.84rem;
-      font-weight: 700;
-      padding: 5px 10px;
-      border-radius: 4px;
-      margin-bottom: 8px;
-      width: 100%;
-    }
-    .metrics-table {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 12px;
-      font-size: 0.82rem;
-      font-family: 'JetBrains Mono', monospace;
-      margin-bottom: 8px;
-      background: rgba(0, 0, 0, 0.03);
-      padding: 8px 12px;
-      border-radius: 8px;
-    }
-    .m-label { color: #5d7568; }
-    .m-val { font-weight: 600; color: #1a4d2e; text-align: right; }
-    .m-val.alert { color: #d97706; font-weight: 700; }
-
-    .control-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .cozy-btn {
-      background: #2d7a46;
-      color: #ffffff;
-      border: none;
-      border-radius: 18px;
-      padding: 6px 14px;
-      font-size: 0.82rem;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 3px 8px rgba(45, 122, 70, 0.25);
-      transition: all 0.15s ease;
-    }
-    .cozy-btn:hover {
-      background: #236539;
-      transform: translateY(-1px);
-    }
-    .cozy-btn.secondary {
-      background: #ffffff;
-      color: #244234;
-      border: 1.5px solid #a3ccb1;
-    }
-    .cozy-btn.secondary:hover {
-      background: #eef6f1;
-    }
-
-    .instructions-card {
-      margin-top: auto;
-      max-width: 520px;
-      font-size: 0.8rem;
-      line-height: 1.5;
-      color: #3b5c49;
-    }
-
-    .boundary-flash {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      box-shadow: inset 0 0 0 6px transparent;
-      transition: box-shadow 0.2s ease;
-      z-index: 5;
-    }
-    .boundary-flash.active {
-      box-shadow: inset 0 0 0 6px rgba(245, 158, 11, 0.6);
-    }
-
-    @media (max-width: 900px) {
-      .hud-card { max-width: 280px; padding: 8px 10px; }
-      .hud-title { font-size: 1.05rem; }
-      .hud-sub { font-size: 0.75rem; margin-bottom: 4px; }
-      .section-banner { font-size: 0.75rem; padding: 3px 6px; margin-bottom: 6px; }
-      .metrics-table { font-size: 0.68rem; gap: 2px 6px; padding: 4px 6px; }
-      .instructions-card { display: none; }
-      .cozy-btn { padding: 4px 10px; font-size: 0.74rem; }
     }
   </style>
 </head>
 <body>
   <canvas id="application-canvas"></canvas>
-  <div id="boundary-flash" class="boundary-flash"></div>
-  <div id="phase3-overlay">
-    <!-- Top Left: Environment Telemetry & Controls -->
-    <div class="hud-card">
-      <div class="hud-header">
-        <span class="hud-title">⛵ Little Paper Boat</span>
-        <span class="phase-tag">Phase 3: Stylized Environment</span>
-      </div>
-      <div class="hud-sub">Hand-Painted Flora, Animated Water & Atmospheric Lighting</div>
-      
-      <div id="p3-section-name" class="section-banner">1. Straight Section</div>
-
-      <!-- Navigation & Biome Metrics -->
-      <div class="metrics-table">
-        <span class="m-label">Spline Dist (s):</span>
-        <span id="p3-metric-distance" class="m-val">0.0 m</span>
-
-        <span class="m-label">Lateral (u):</span>
-        <span id="p3-metric-lateral" class="m-val">0.00 m</span>
-
-        <span class="m-label">River Width:</span>
-        <span id="p3-metric-width" class="m-val">8.0 m</span>
-
-        <span class="m-label">Forward Speed:</span>
-        <span id="p3-metric-speed" class="m-val">4.8 m/s</span>
-
-        <span class="m-label">Atmosphere:</span>
-        <span class="m-val">Warm Sun & Motes</span>
-
-        <span class="m-label">Flora & Biome:</span>
-        <span class="m-val">Lush Riverbank</span>
-      </div>
-
-      <div class="control-actions">
-        <button id="p3-btn-toggle-debug" class="cozy-btn secondary">Show Vectors (D)</button>
-        <button id="p3-btn-toggle-joystick" class="cozy-btn secondary">Toggle Joystick</button>
-        <button id="p3-btn-restart" class="cozy-btn secondary">Restart (R)</button>
-      </div>
-    </div>
-
-    <!-- Bottom Left: Controls Guide -->
-    <div class="hud-card instructions-card">
-      <div style="font-weight: 700; color: #1e5233; margin-bottom: 2px;">Cozy River Journey:</div>
-      <div>🌸 <strong>Flora:</strong> Fluffy deciduous trees, pine conifers, wild daisies, buttercups, and lotus lily pads.</div>
-      <div>🌊 <strong>Water:</strong> Dual-layer scrolling caustics, normal ripples, and soft shoreline foam.</div>
-      <div>⌨️ <strong>Steer:</strong> <code>A</code> / <code>D</code> or Arrow Keys | 🖱️ <strong>Mouse Drag</strong> | 📱 <strong>Touch Joystick</strong></div>
-    </div>
-  </div>
+  <div id="ui-container"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -158,6 +158,43 @@
   gap: 12px;
 }
 
+.hud-integrity {
+  background: rgba(253, 251, 247, 0.88);
+  backdrop-filter: blur(8px);
+  padding: 8px 14px;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #e63946;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  letter-spacing: 2px;
+}
+
+.hud-checkpoint-banner {
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(253, 251, 247, 0.95);
+  backdrop-filter: blur(10px);
+  color: #2b583f;
+  padding: 8px 22px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(43, 88, 63, 0.22);
+  border: 1px solid rgba(255, 215, 0, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 25;
+}
+
+.hud-checkpoint-banner.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 .hud-badge {
   background: rgba(253, 251, 247, 0.88);
   backdrop-filter: blur(8px);

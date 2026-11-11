@@ -66,13 +66,42 @@ export class BoatController {
     ring.addComponent('render', {
       type: 'plane'
     });
-    ring.setLocalScale(1.8, 1.0, 2.6);
+    ring.setLocalScale(2.2, 1.0, 3.2);
     ring.setLocalPosition(0, 0.02, 0);
+
+    // Create a circular ripple alpha texture on an offscreen canvas
+    const size = 128;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const center = size / 2;
+    const grad = ctx.createRadialGradient(center, center, size * 0.15, center, center, size * 0.48);
+    grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+    grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.2)');
+    grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(center, center, size * 0.48, 0, Math.PI * 2);
+    ctx.fill();
+
+    const texture = new pc.Texture(this.app.graphicsDevice, {
+      width: size,
+      height: size,
+      format: pc.PIXELFORMAT_RGBA8,
+      mipmaps: false
+    });
+    texture.setSource(canvas);
 
     const ringMat = new pc.StandardMaterial();
     ringMat.diffuse = new pc.Color(1.0, 1.0, 1.0);
-    ringMat.opacity = 0.35;
-    ringMat.blendType = pc.BLEND_ADDITIVE;
+    ringMat.opacityMap = texture;
+    ringMat.opacityMapChannel = 'a';
+    ringMat.opacity = 0.5;
+    ringMat.blendType = pc.BLEND_NORMAL;
     ringMat.cull = pc.CULLFACE_NONE;
     ringMat.update();
 

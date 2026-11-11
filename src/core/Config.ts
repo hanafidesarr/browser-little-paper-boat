@@ -19,15 +19,16 @@ export const GameConfig = {
     BOUNCE_DAMPING: 0.5          // Restitution on bank contact
   },
 
-  // Camera Settings
+  // Reconstructed Elevated Third-Person Camera
   CAMERA: {
-    FOLLOW_DISTANCE: 7.5,        // Distance behind boat
-    ELEVATION: 4.2,              // Height above boat
-    LOOKAHEAD: 7.0,              // Distance ahead along river spline to look at
-    FOV: 55,
-    POS_SMOOTHING: 7.0,          // Camera position lerp rate
+    FOLLOW_DISTANCE: 12.0,       // 10-16 world units behind boat
+    ELEVATION: 10.5,             // 8-12 world units above water
+    LOOKAHEAD: 3.5,              // Distance ahead along river spline to look at
+    LOOK_TARGET_Y: 0.35,         // Vertical offset for look target (at water/boat surface)
+    FOV: 60,                     // 60-70 degrees
+    POS_SMOOTHING: 6.0,          // Camera position lerp rate
     ROT_SMOOTHING: 6.0,          // Camera rotation slerp rate
-    BANK_INFLUENCE: 0.2          // Camera subtle roll banking
+    BANK_INFLUENCE: 0.15         // Subtle camera roll banking
   },
 
   // Audio Volumes

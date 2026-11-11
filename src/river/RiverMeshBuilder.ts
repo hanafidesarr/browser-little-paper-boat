@@ -129,15 +129,14 @@ export class RiverMeshBuilder {
         const bl = (r + 1) * numCols + c;
         const br = bl + 1;
 
-        // Triangle 1: CCW (tl, bl, tr)
+        // Counter-Clockwise Triangles (upward normal)
         indices[idx++] = tl;
-        indices[idx++] = bl;
         indices[idx++] = tr;
+        indices[idx++] = bl;
 
-        // Triangle 2: CCW (tr, bl, br)
         indices[idx++] = tr;
-        indices[idx++] = bl;
         indices[idx++] = br;
+        indices[idx++] = bl;
       }
     }
 
@@ -219,8 +218,8 @@ export class RiverMeshBuilder {
         const bl = (r + 1) * numCols + c;
         const br = bl + 1;
 
-        indicesList.push(tl, bl, tr);
-        indicesList.push(tr, bl, br);
+        indicesList.push(tl, tr, bl);
+        indicesList.push(tr, br, bl);
       }
 
       // Right Bank quads (columns 3->4 and 4->5)
@@ -230,8 +229,8 @@ export class RiverMeshBuilder {
         const bl = (r + 1) * numCols + c;
         const br = bl + 1;
 
-        indicesList.push(tl, bl, tr);
-        indicesList.push(tr, bl, br);
+        indicesList.push(tl, tr, bl);
+        indicesList.push(tr, br, bl);
       }
     }
 
@@ -261,8 +260,9 @@ export class RiverMeshBuilder {
 
   private static createDefaultBankMaterial(): pc.StandardMaterial {
     const mat = new pc.StandardMaterial();
-    mat.diffuse = new pc.Color(0.35, 0.58, 0.32);
-    mat.ambient = new pc.Color(0.24, 0.40, 0.22);
+    mat.diffuse = new pc.Color(0.32, 0.58, 0.28);
+    mat.ambient = new pc.Color(0.22, 0.42, 0.20);
+    mat.cull = pc.CULLFACE_NONE;
     mat.update();
     return mat;
   }

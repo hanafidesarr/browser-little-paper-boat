@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Little Paper Boat — Phase 2 Hybrid Boat Movement</title>
+  <title>Little Paper Boat — Phase 2 Reconstructed Elevated Camera</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -80,7 +80,7 @@
     .hud-sub {
       font-size: 0.84rem;
       color: #557762;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .section-banner {
       display: inline-block;
@@ -91,16 +91,16 @@
       font-weight: 700;
       padding: 5px 10px;
       border-radius: 4px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       width: 100%;
     }
     .metrics-table {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 5px 12px;
-      font-size: 0.84rem;
+      gap: 4px 12px;
+      font-size: 0.82rem;
       font-family: 'JetBrains Mono', monospace;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       background: rgba(0, 0, 0, 0.03);
       padding: 8px 12px;
       border-radius: 8px;
@@ -108,6 +108,23 @@
     .m-label { color: #5d7568; }
     .m-val { font-weight: 600; color: #1a4d2e; text-align: right; }
     .m-val.alert { color: #d97706; font-weight: 700; }
+
+    /* Camera Debug Sub-panel */
+    .cam-debug-box {
+      background: rgba(45, 122, 70, 0.08);
+      border: 1px solid rgba(45, 122, 70, 0.2);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .cam-debug-header {
+      font-weight: 700;
+      color: #1e5233;
+      margin-bottom: 4px;
+      font-size: 0.8rem;
+    }
 
     .control-actions {
       display: flex;
@@ -119,8 +136,8 @@
       color: #ffffff;
       border: none;
       border-radius: 18px;
-      padding: 7px 14px;
-      font-size: 0.84rem;
+      padding: 6px 14px;
+      font-size: 0.82rem;
       font-weight: 700;
       cursor: pointer;
       box-shadow: 0 3px 8px rgba(45, 122, 70, 0.25);
@@ -142,7 +159,7 @@
     .instructions-card {
       margin-top: auto;
       max-width: 520px;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       line-height: 1.5;
       color: #3b5c49;
     }
@@ -162,9 +179,15 @@
       box-shadow: inset 0 0 0 6px rgba(245, 158, 11, 0.6);
     }
 
-    @media (max-width: 600px) {
-      .hud-card { max-width: 100%; padding: 10px 14px; }
-      .metrics-table { font-size: 0.74rem; }
+    @media (max-width: 900px) {
+      .hud-card { max-width: 280px; padding: 8px 10px; }
+      .hud-title { font-size: 1.05rem; }
+      .hud-sub { font-size: 0.75rem; margin-bottom: 4px; }
+      .section-banner { font-size: 0.75rem; padding: 3px 6px; margin-bottom: 6px; }
+      .metrics-table { font-size: 0.68rem; gap: 2px 6px; padding: 4px 6px; }
+      .cam-debug-box { font-size: 0.65rem; padding: 4px 6px; }
+      .instructions-card { display: none; }
+      .cozy-btn { padding: 4px 10px; font-size: 0.74rem; }
     }
   </style>
 </head>
@@ -176,12 +199,13 @@
     <div class="hud-card">
       <div class="hud-header">
         <span class="hud-title">⛵ Little Paper Boat</span>
-        <span class="phase-tag">Phase 2: Hybrid Boat Movement</span>
+        <span class="phase-tag">Phase 2: Reconstructed Camera</span>
       </div>
-      <div class="hud-sub">Origami Boat Physics & Spline-Relative Navigation</div>
+      <div class="hud-sub">Elevated Third-Person River Navigation View</div>
       
       <div id="p2-section-name" class="section-banner">1. Straight Section</div>
 
+      <!-- Navigation Metrics -->
       <div class="metrics-table">
         <span class="m-label">Spline Dist (s):</span>
         <span id="p2-metric-distance" class="m-val">0.0 m</span>
@@ -189,23 +213,21 @@
         <span class="m-label">Lateral (u):</span>
         <span id="p2-metric-lateral" class="m-val">0.00 m</span>
 
-        <span class="m-label">Lateral Velocity:</span>
-        <span id="p2-metric-latvel" class="m-val">0.00 m/s</span>
+        <span class="m-label">River Width:</span>
+        <span id="p2-metric-width" class="m-val">8.0 m</span>
 
         <span class="m-label">Forward Speed:</span>
         <span id="p2-metric-speed" class="m-val">4.8 m/s</span>
+      </div>
 
-        <span class="m-label">River Width W(s):</span>
-        <span id="p2-metric-width" class="m-val">8.0 m</span>
-
-        <span class="m-label">Boundary Margin:</span>
-        <span id="p2-metric-boundary" class="m-val">OK</span>
-
-        <span class="m-label">Active Input:</span>
-        <span id="p2-metric-input" class="m-val">Keyboard / Touch</span>
-
-        <span class="m-label">Visual Banking:</span>
-        <span id="p2-metric-bank" class="m-val">0.0°</span>
+      <!-- Section 6: Camera Debugging Telemetry Panel -->
+      <div class="cam-debug-box">
+        <div class="cam-debug-header">📷 Camera Debug Telemetry:</div>
+        <div>Cam Pos: <span id="cam-pos" style="color: #1a4d2e;">(0.0, 10.5, -10.0)</span></div>
+        <div>Pitch: <span id="cam-pitch" style="color: #1a4d2e; font-weight: 700;">-33.5° (Downward)</span> | Yaw: <span id="cam-yaw">0.0°</span></div>
+        <div>Look Target: <span id="cam-target">(0.0, 0.35, 5.5)</span></div>
+        <div>Distance to Boat: <span id="cam-boat-dist">12.5 m</span> | Height: <span id="cam-height">10.5 m</span></div>
+        <div>Boat Pos: <span id="boat-pos">(0.0, 0.0, 2.0)</span> | River H: 0.0m</div>
       </div>
 
       <div class="control-actions">
@@ -217,11 +239,10 @@
 
     <!-- Bottom Left: Controls Guide -->
     <div class="hud-card instructions-card">
-      <div style="font-weight: 700; color: #1e5233; margin-bottom: 2px;">Controls & Navigation Tests:</div>
-      <div>⌨️ <strong>Steer:</strong> <code>A</code> / <code>D</code> or <code>Left</code> / <code>Right</code> Arrow Keys</div>
-      <div>🖱️ <strong>Mouse Drag:</strong> Click & drag horizontally across the river</div>
-      <div>📱 <strong>Mobile Joystick:</strong> Drag the virtual joystick knob on bottom-left</div>
-      <div>🌊 <strong>Boundary Safety:</strong> Steer into river banks to test collision-ready soft bounce</div>
+      <div style="font-weight: 700; color: #1e5233; margin-bottom: 2px;">Elevated Camera & Controls:</div>
+      <div>📐 <strong>Framing:</strong> 35° downward pitch, 10.5m elevation, boat placed in lower-middle third.</div>
+      <div>⌨️ <strong>Steer:</strong> <code>A</code> / <code>D</code> or <code>Left</code> / <code>Right</code> Arrow Keys | 🖱️ <strong>Mouse Drag</strong> | 📱 <strong>Touch Joystick</strong></div>
+      <div>🔍 <strong>Debug Lines:</strong> Orange = Camera Look Ray, Cyan = Camera Forward, Green = Spline Tangent, Red = Spline Normal.</div>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

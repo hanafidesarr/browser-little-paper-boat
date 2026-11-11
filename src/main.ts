@@ -56,23 +56,28 @@ window.addEventListener('DOMContentLoaded', () => {
   const boat = new BoatController(app, river);
   boat.setPosition(2.0, 0.0);
 
-  // 5. Elevated Third-Person Follow Camera with Lookahead
+  // 5. Reconstructed Elevated Follow Camera with Lookahead
   const camera = new RiverFollowCamera(app, river, boat);
 
-  // 6. Debug Visualizer (Preserving Phase 1)
+  // 6. Debug Visualizer (Preserving Phase 1 + Camera Vector Debugger)
   const debugVis = new RiverDebugVisualizer(app, river);
 
   // 7. Telemetry & UI Bindings
   const elDistance = document.getElementById('p2-metric-distance')!;
   const elLateral = document.getElementById('p2-metric-lateral')!;
-  const elLatVel = document.getElementById('p2-metric-latvel')!;
   const elSpeed = document.getElementById('p2-metric-speed')!;
   const elWidth = document.getElementById('p2-metric-width')!;
-  const elBoundary = document.getElementById('p2-metric-boundary')!;
-  const elInput = document.getElementById('p2-metric-input')!;
-  const elBank = document.getElementById('p2-metric-bank')!;
   const elSection = document.getElementById('p2-section-name')!;
   const boundaryFlash = document.getElementById('boundary-flash')!;
+
+  // Camera Telemetry DOM elements
+  const elCamPos = document.getElementById('cam-pos')!;
+  const elCamPitch = document.getElementById('cam-pitch')!;
+  const elCamYaw = document.getElementById('cam-yaw')!;
+  const elCamTarget = document.getElementById('cam-target')!;
+  const elCamBoatDist = document.getElementById('cam-boat-dist')!;
+  const elCamHeight = document.getElementById('cam-height')!;
+  const elBoatPos = document.getElementById('boat-pos')!;
 
   const btnToggleDebug = document.getElementById('p2-btn-toggle-debug')!;
   const btnToggleJoystick = document.getElementById('p2-btn-toggle-joystick')!;
@@ -91,14 +96,10 @@ window.addEventListener('DOMContentLoaded', () => {
     return '7. Compound Left/Right Turns (Final Approach)';
   };
 
-  // Bank Bump Event: Visual soft rebound feedback
-  boat.onBankBump = (side, velocity) => {
-    elBoundary.textContent = `BUMP (${side.toUpperCase()} ${velocity.toFixed(1)}m/s)`;
-    elBoundary.classList.add('alert');
+  // Bank Bump Event
+  boat.onBankBump = () => {
     boundaryFlash.classList.add('active');
-
     setTimeout(() => {
-      elBoundary.classList.remove('alert');
       boundaryFlash.classList.remove('active');
     }, 350);
   };
@@ -141,40 +142,32 @@ window.addEventListener('DOMContentLoaded', () => {
       camera.update(dt);
     }
 
-    // Render debug vectors if enabled
+    // Render debug vectors (spline lines + camera look ray & vectors)
     debugVis.render();
+    debugVis.renderCameraDebug(camera, boat);
 
     // Telemetry updates
     const dist = boat.getDistance();
     const lat = boat.getLateralOffset();
-    const latVel = boat.getLateralVelocity();
     const fwdSpeed = boat.getForwardSpeed();
     const frame = river.getFrameAtDistance(dist);
+    const bPos = boat.getLogicalPosition();
 
     elDistance.textContent = `${dist.toFixed(1)} m / ${totalLength.toFixed(1)} m`;
     elLateral.textContent = `${lat >= 0 ? '+' : ''}${lat.toFixed(2)} m`;
-    elLatVel.textContent = `${latVel.toFixed(2)} m/s`;
     elSpeed.textContent = `${fwdSpeed.toFixed(1)} m/s`;
     elWidth.textContent = `${frame.width.toFixed(1)} m`;
-
-    if (!boat.isCollidingBoundary()) {
-      elBoundary.textContent = 'CLEAR';
-    }
-
-    // Active Input telemetry
-    const effectiveSteer = boat.getEffectiveSteerAxis();
-    if (Math.abs(effectiveSteer) > 0.05) {
-      elInput.textContent = `Steering (${effectiveSteer > 0 ? 'Right' : 'Left'} ${(Math.abs(effectiveSteer) * 100).toFixed(0)}%)`;
-    } else {
-      elInput.textContent = 'Idle (Center)';
-    }
-
-    // Banking angle
-    const bankDeg = -(latVel / 7.2) * 16.0;
-    elBank.textContent = `${bankDeg.toFixed(1)}°`;
-
-    // Active Section Banner
     elSection.textContent = getSectionName(dist);
+
+    // Camera Telemetry
+    const camTele = camera.getTelemetry();
+    elCamPos.textContent = `(${camTele.worldPosition.x.toFixed(1)}, ${camTele.worldPosition.y.toFixed(1)}, ${camTele.worldPosition.z.toFixed(1)})`;
+    elCamPitch.textContent = `${camTele.pitchDeg.toFixed(1)}° (Downward)`;
+    elCamYaw.textContent = `${camTele.yawDeg.toFixed(1)}°`;
+    elCamTarget.textContent = `(${camTele.lookTarget.x.toFixed(1)}, ${camTele.lookTarget.y.toFixed(1)}, ${camTele.lookTarget.z.toFixed(1)})`;
+    elCamBoatDist.textContent = `${camTele.distanceToBoat.toFixed(1)} m`;
+    elCamHeight.textContent = `${camTele.heightAboveWater.toFixed(1)} m`;
+    elBoatPos.textContent = `(${bPos.x.toFixed(1)}, ${bPos.y.toFixed(1)}, ${bPos.z.toFixed(1)})`;
 
     // Auto-loop test when reaching end
     if (dist >= totalLength) {
@@ -184,5 +177,5 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  console.log('Little Paper Boat — Phase 2 Hybrid Boat Movement initialized.');
+  console.log('Little Paper Boat — Reconstructed Elevated Camera initialized.');
 });

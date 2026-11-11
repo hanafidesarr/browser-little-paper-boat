@@ -202,9 +202,15 @@ export class Game {
 
     this.ui.onModalStateChange = (modal: ModalType, isOpen: boolean) => {
       if (isOpen) {
+        if (modal === 'PAUSE') {
+          this.state = 'PAUSED';
+        }
         this.boat.setJoystickVisible(false);
         this.boat.setMovementEnabled(false);
       } else {
+        if (modal === 'PAUSE' && this.state === 'PAUSED') {
+          this.state = 'PLAYING';
+        }
         if (this.state === 'PLAYING') {
           this.boat.setMovementEnabled(true);
           this.boat.setJoystickVisible(true);

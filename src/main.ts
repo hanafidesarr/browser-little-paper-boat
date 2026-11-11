@@ -1,12 +1,29 @@
 import { Game } from './core/Game';
 import { LevelValidator } from './levels/LevelValidator';
 import { AcceptanceTestRunner } from './test/AcceptanceTestRunner';
+import { Phase6VerificationRunner } from './test/Phase6VerificationRunner';
 import './ui/styles.css';
+
+// Global error tracking for technical verification
+(window as any).__consoleErrors = [];
+window.addEventListener('error', (event) => {
+  (window as any).__consoleErrors.push({
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno
+  });
+});
+window.addEventListener('unhandledrejection', (event) => {
+  (window as any).__consoleErrors.push({
+    message: event.reason?.message || String(event.reason)
+  });
+});
 
 window.addEventListener('DOMContentLoaded', async () => {
   const game = new Game();
   (window as any).__gameInstance = game;
   (window as any).runAcceptanceTests = () => AcceptanceTestRunner.runAllTests(game);
+  (window as any).runPhase6Verification = () => Phase6VerificationRunner.runVerification(game);
 
   const validationResults = LevelValidator.validateAllLevels();
   console.log('=== LEVEL VALIDATION REPORT ===');
@@ -21,6 +38,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   const allPassed = validationResults.every(r => r.passed);
   console.log(`[Validation Summary] 10/10 Levels Validated: ${allPassed ? 'ALL PASSED' : 'ERRORS DETECTED'}`);
+
+  // Phase 6 Complete Verification via URL query param
+  if (window.location.search.includes('verify=1')) {
+    setTimeout(async () => {
+      const results = await Phase6VerificationRunner.runVerification(game);
+      (window as any).__verificationResults = results;
+    }, 500);
+    return;
+  }
 
   // Acceptance test runner via URL query param
   if (window.location.search.includes('run_tests=1')) {

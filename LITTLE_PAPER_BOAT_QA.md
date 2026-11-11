@@ -1,8 +1,27 @@
 # Little Paper Boat — QA & Verification Report
 
-## Verification Status: ALL PHASES VERIFIED & PASSED
+## Verification Status: PHASE 0, PHASE 1 & PHASE 2 VERIFIED & PASSED
 
-### 1. Spline & River Generation (Phase 1)
+---
+
+## Phase 2 — Hybrid Boat Movement Acceptance Tests
+
+| Test ID | Test Scenario | Verified Behavior | Status |
+|:---:|:---|:---|:---:|
+| **P2-01** | **Straight Path Drift** | Boat drifts smoothly along spline forward direction ($0\text{m} \rightarrow 35\text{m}$). Lateral steering responds symmetrically with smooth acceleration and drag damping. | **PASSED** |
+| **P2-02** | **S-Curve Navigation** | Boat automatically turns with river tangents through left and right S-curves ($120\text{m} \rightarrow 195\text{m}$). Dynamic roll banking tilts smoothly into turns proportional to lateral velocity and curvature. | **PASSED** |
+| **P2-03** | **Narrow Passage Navigation** | In the $4.8\text{m}$ canyon choke point ($195\text{m} \rightarrow 240\text{m}$), boundary limits safely contract. Current assistance accelerates forward speed by $+20\%$, testing precision steering. | **PASSED** |
+| **P2-04** | **Wide Section Roaming** | In the $12.0\text{m}$ expansive basin ($240\text{m} \rightarrow 285\text{m}$), lateral boundary limits expand to allow wide exploration. Forward current relaxes smoothly. | **PASSED** |
+| **P2-05** | **Collision-Ready Boundaries** | Steering the boat to maximum lateral limits ($u = \pm (W/2 - 0.7\text{m})$) triggers soft restitution bounce ($v = -v \times 0.5$) and subtle visual jiggle without clipping into terrain or stalling. | **PASSED** |
+| **P2-06** | **Logical vs Visual Separation** | The logical root entity (`boatEntity`) holds exact water surface navigation coordinates for physics and collisions. The child entity (`visualRoot`) houses vertical sinusoidal bobbing ($2.2\text{Hz}$), wave rocking, and wake pulse. | **PASSED** |
+| **P2-07** | **Keyboard Controls** | `A` / `D` and `ArrowLeft` / `ArrowRight` inputs steer left/right with realistic momentum and smooth damping. | **PASSED** |
+| **P2-08** | **Mouse Drag Controls** | Clicking and dragging horizontally across the browser canvas applies continuous proportional lateral displacement. | **PASSED** |
+| **P2-09** | **Mobile Virtual Joystick** | Responsive on-screen virtual joystick knob on bottom-left tracks touch displacement, tested on landscape mobile screen sizes. | **PASSED** |
+| **P2-10** | **Elevated Lookahead Camera** | Follow camera maintains smooth distance behind boat ($7.5\text{m}$), elevated ($4.2\text{m}$), with lookahead ($7.0\text{m}$) targeting forward along the spline curve with zero abrupt snapping. | **PASSED** |
+
+---
+
+## Phase 1 — Spline & River Generation Acceptance Tests
 - [x] **Catmull-Rom Interpolation:** Continuous $C^1$ smooth tangents, precise arc-length parameterization lookup table with 20 sub-samples per segment.
 - [x] **River Mesh Builder:** Procedural ribbon grid with customizable cross-subdivisions (4 to 6), cupped center riverbed for visual depth.
 - [x] **River Banks & Embankments:** Extruded 6-point profile cross-sections extending smoothly from water edges outward to 12m terrain skirts with zero seam gaps.

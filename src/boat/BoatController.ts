@@ -2,52 +2,63 @@ import * as pc from 'playcanvas';
 import { RiverSystem } from '../river/RiverSystem';
 import { GameConfig } from '../core/Config';
 import { PaperBoatMesh } from './PaperBoatMesh';
+import { VirtualJoystick } from './VirtualJoystick';
 
 export interface BoatInputState {
-  steerAxis: number; // -1 (left) to +1 (right)
-  targetLateralRatio?: number; // Pointer or touch direct positioning [-1, 1]
+  keyboardAxis: number;  // -1 to +1 from A/D or Arrow keys
+  mouseDragAxis: number; // -1 to +1 from mouse drag
+  joystickAxis: number;  // -1 to +1 from touch joystick
 }
 
 export class BoatController {
   private app: pc.AppBase;
   private river: RiverSystem;
-  private boatEntity: pc.Entity;
-  private visualRoot: pc.Entity;
 
-  // River position state
+  // Hierarchical Nodes: Logical navigation parent vs Visual animation child
+  private logicalNode: pc.Entity;  // Placed at true river coordinates (s, u)
+  private visualRoot: pc.Entity;   // Child node holding buoyancy bobbing, wave rocking, banking
+
+  // Navigation State
   private distance: number = 0;
   private lateralOffset: number = 0;
   private lateralVelocity: number = 0;
   private baseSpeed: number = GameConfig.BOAT.DEFAULT_SPEED;
+  private currentForwardSpeed: number = GameConfig.BOAT.DEFAULT_SPEED;
 
-  // Animation timing
+  // Animation Timing
   private animTimer: number = 0;
-  private isCollidingBank: boolean = false;
   private bankBounceCooldown: number = 0;
+  private isAtBoundary: boolean = false;
 
-  // Input state
-  private inputState: BoatInputState = { steerAxis: 0 };
-  private touchDragging: boolean = false;
-  private touchStartX: number = 0;
-  private touchCurrentX: number = 0;
+  // Inputs
+  private inputState: BoatInputState = { keyboardAxis: 0, mouseDragAxis: 0, joystickAxis: 0 };
+  private virtualJoystick: VirtualJoystick | null = null;
+  private mouseDragging: boolean = false;
+  private mouseStartX: number = 0;
 
-  // Wake and splash emitter entities
+  // Wake & Ripples
   private rippleEntity: pc.Entity;
+
+  // Collision Callback
+  public onBankBump: ((side: 'left' | 'right', velocity: number) => void) | null = null;
 
   constructor(app: pc.AppBase, river: RiverSystem) {
     this.app = app;
     this.river = river;
 
-    // Create origami boat mesh entity
-    this.boatEntity = PaperBoatMesh.create(this.app.graphicsDevice);
-    this.visualRoot = this.boatEntity.findByName('VisualRoot') as pc.Entity;
-    this.app.root.addChild(this.boatEntity);
+    // 1. Create origami boat mesh entity hierarchy
+    this.logicalNode = PaperBoatMesh.create(this.app.graphicsDevice);
+    this.visualRoot = this.logicalNode.findByName('VisualRoot') as pc.Entity;
+    this.app.root.addChild(this.logicalNode);
 
-    // Create subtle water wake ripple ring under boat
+    // 2. Create water wake ripple ring under boat (attached to visual root)
     this.rippleEntity = this.createRippleDisc();
-    this.boatEntity.addChild(this.rippleEntity);
+    this.visualRoot.addChild(this.rippleEntity);
 
-    this.bindInputs();
+    // 3. Initialize Input Systems
+    this.bindKeyboardInputs();
+    this.bindMouseDragInputs();
+    this.initVirtualJoystick();
   }
 
   private createRippleDisc(): pc.Entity {
@@ -72,60 +83,67 @@ export class BoatController {
     return ring;
   }
 
-  private bindInputs(): void {
-    // Keyboard inputs
+  private bindKeyboardInputs(): void {
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
-        this.inputState.steerAxis = -1;
+        this.inputState.keyboardAxis = -1;
       } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
-        this.inputState.steerAxis = 1;
+        this.inputState.keyboardAxis = 1;
       }
     });
 
     window.addEventListener('keyup', (e) => {
       if (
-        (e.code === 'KeyA' || e.code === 'ArrowLeft') && this.inputState.steerAxis < 0 ||
-        (e.code === 'KeyD' || e.code === 'ArrowRight') && this.inputState.steerAxis > 0
+        (e.code === 'KeyA' || e.code === 'ArrowLeft') && this.inputState.keyboardAxis < 0 ||
+        (e.code === 'KeyD' || e.code === 'ArrowRight') && this.inputState.keyboardAxis > 0
       ) {
-        this.inputState.steerAxis = 0;
+        this.inputState.keyboardAxis = 0;
+      }
+    });
+  }
+
+  private bindMouseDragInputs(): void {
+    const canvas = this.app.graphicsDevice.canvas;
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) { // Left click
+        this.mouseDragging = true;
+        this.mouseStartX = e.clientX;
       }
     });
 
-    // Pointer / Touch inputs
-    const canvas = this.app.graphicsDevice.canvas;
+    window.addEventListener('mousemove', (e) => {
+      if (!this.mouseDragging) return;
+      const deltaX = (e.clientX - this.mouseStartX) / (window.innerWidth * 0.25);
+      this.inputState.mouseDragAxis = Math.max(-1.0, Math.min(1.0, deltaX * 1.5));
+    });
 
-    const onPointerDown = (clientX: number) => {
-      this.touchDragging = true;
-      this.touchStartX = clientX;
-      this.touchCurrentX = clientX;
+    const stopMouseDrag = () => {
+      this.mouseDragging = false;
+      this.inputState.mouseDragAxis = 0;
     };
 
-    const onPointerMove = (clientX: number) => {
-      if (!this.touchDragging) return;
-      this.touchCurrentX = clientX;
-      const deltaX = (this.touchCurrentX - this.touchStartX) / (window.innerWidth * 0.35);
-      this.inputState.steerAxis = Math.max(-1, Math.min(1, deltaX * 1.5));
+    window.addEventListener('mouseup', stopMouseDrag);
+  }
+
+  private initVirtualJoystick(): void {
+    this.virtualJoystick = new VirtualJoystick();
+    this.virtualJoystick.onAxisChange = (axis: number) => {
+      this.inputState.joystickAxis = axis;
     };
+  }
 
-    const onPointerUp = () => {
-      this.touchDragging = false;
-      this.inputState.steerAxis = 0;
-    };
-
-    canvas.addEventListener('mousedown', (e) => onPointerDown(e.clientX));
-    window.addEventListener('mousemove', (e) => onPointerMove(e.clientX));
-    window.addEventListener('mouseup', () => onPointerUp());
-
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length > 0) onPointerDown(e.touches[0].clientX);
-    }, { passive: true });
-
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 0) onPointerMove(e.touches[0].clientX);
-    }, { passive: true });
-
-    window.addEventListener('touchend', () => onPointerUp());
-    window.addEventListener('touchcancel', () => onPointerUp());
+  /**
+   * Evaluates combined steer axis from all inputs (-1 to +1).
+   */
+  public getEffectiveSteerAxis(): number {
+    let axis = this.inputState.keyboardAxis;
+    if (Math.abs(this.inputState.joystickAxis) > 0.05) {
+      axis = this.inputState.joystickAxis;
+    } else if (Math.abs(this.inputState.mouseDragAxis) > 0.05) {
+      axis = this.inputState.mouseDragAxis;
+    }
+    return Math.max(-1.0, Math.min(1.0, axis));
   }
 
   public setPosition(distance: number, lateral: number = 0): void {
@@ -139,91 +157,105 @@ export class BoatController {
     if (dt <= 0) return;
     this.animTimer += dt;
 
-    // 1. Spline sampling at current distance
-    const sample = this.river.sampleAtDistance(this.distance);
+    // 1. Spline sample at current distance
+    const frame = this.river.getFrameAtDistance(this.distance);
 
-    // 2. Forward river current movement
-    const currentSpeed = (sample.current > 0 ? sample.current : this.baseSpeed);
-    this.distance += currentSpeed * dt;
+    // 2. Current assistance & forward speed
+    const currentMultiplier = frame.current > 0 ? (frame.current / 5.0) : 1.0;
+    this.currentForwardSpeed = this.baseSpeed * currentMultiplier;
+    this.distance += this.currentForwardSpeed * dt;
 
-    // Check end of river
     const totalLength = this.river.getTotalLength();
     if (this.distance > totalLength) {
       this.distance = totalLength;
     }
 
-    // 3. Lateral steering physics
-    const targetAccel = this.inputState.steerAxis * GameConfig.BOAT.STEER_ACCEL;
+    // 3. Smooth lateral acceleration & damping
+    const steerInput = this.getEffectiveSteerAxis();
+    const targetAccel = steerInput * GameConfig.BOAT.STEER_ACCEL;
     this.lateralVelocity += targetAccel * dt;
-    // Damping / Drag
+
+    // Damping / drag
     this.lateralVelocity -= this.lateralVelocity * GameConfig.BOAT.STEER_DAMPING * dt;
     this.lateralOffset += this.lateralVelocity * dt;
 
-    // 4. River boundary collision and soft bounce
-    const maxHalfWidth = (sample.width * 0.5) - GameConfig.BOAT.SAFETY_MARGIN;
+    // 4. Collision-ready river boundaries & soft rebound
+    const maxHalfWidth = (frame.width * 0.5) - GameConfig.BOAT.SAFETY_MARGIN;
+    this.isAtBoundary = false;
+
     if (this.bankBounceCooldown > 0) {
       this.bankBounceCooldown -= dt;
     }
 
     if (this.lateralOffset < -maxHalfWidth) {
       this.lateralOffset = -maxHalfWidth;
+      this.isAtBoundary = true;
       if (this.lateralVelocity < 0) {
+        const impactVel = Math.abs(this.lateralVelocity);
         this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
-        this.onBankBump();
+        this.triggerBankBump('left', impactVel);
       }
     } else if (this.lateralOffset > maxHalfWidth) {
       this.lateralOffset = maxHalfWidth;
+      this.isAtBoundary = true;
       if (this.lateralVelocity > 0) {
+        const impactVel = Math.abs(this.lateralVelocity);
         this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
-        this.onBankBump();
+        this.triggerBankBump('right', impactVel);
       }
     }
 
-    // 5. Update Boat Entity in 3D Space
+    // 5. Update Logical Node and Visual Child Node
     this.updateTransform(dt);
   }
 
-  private onBankBump(): void {
+  private triggerBankBump(side: 'left' | 'right', velocity: number): void {
     if (this.bankBounceCooldown <= 0) {
-      this.bankBounceCooldown = 0.3;
-      // Visual small jiggle
-      this.visualRoot.setLocalEulerAngles(
-        (Math.random() - 0.5) * 6,
-        (Math.random() - 0.5) * 8,
-        (Math.random() - 0.5) * 6
-      );
+      this.bankBounceCooldown = 0.28;
+
+      // Soft visual jiggle on visual node
+      const jiggleRoll = (side === 'left' ? 6 : -6) * Math.min(1.0, velocity / 3.0);
+      this.visualRoot.setLocalEulerAngles(2, 0, jiggleRoll);
+
+      if (this.onBankBump) {
+        this.onBankBump(side, velocity);
+      }
     }
   }
 
   private updateTransform(dt: number): void {
-    const sample = this.river.sampleAtDistance(this.distance);
+    const frame = this.river.getFrameAtDistance(this.distance);
 
-    // World position: center + normal * lateralOffset
-    const worldPos = new pc.Vec3(
-      sample.position.x + sample.normal.x * this.lateralOffset,
-      sample.position.y,
-      sample.position.z + sample.normal.z * this.lateralOffset
+    // ==========================================
+    // LOGICAL NAVIGATION NODE (Exact water surface)
+    // ==========================================
+    const logicalPos = new pc.Vec3(
+      frame.position.x + frame.normal.x * this.lateralOffset,
+      frame.position.y,
+      frame.position.z + frame.normal.z * this.lateralOffset
     );
+    this.logicalNode.setPosition(logicalPos);
 
-    // Natural water buoyancy bobbing
-    const bob = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_BOB_FREQ) * GameConfig.BOAT.FLOAT_BOB_AMP;
-    worldPos.y += bob;
-    this.boatEntity.setPosition(worldPos);
-
-    // Orientation along river spline
-    // Forward direction: tangent + subtle lateral angle from steering
-    const forward = sample.tangent.clone();
+    // Logical Orientation: Tangent + steering yaw bias
+    const forward = frame.tangent.clone();
     if (Math.abs(this.lateralVelocity) > 0.05) {
-      const turnAngle = (this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * 0.25;
-      forward.add(sample.normal.clone().mulScalar(turnAngle)).normalize();
+      const turnBias = (this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * 0.22;
+      forward.add(frame.normal.clone().mulScalar(turnBias)).normalize();
     }
 
     const rotMat = new pc.Mat4();
     rotMat.setLookAt(pc.Vec3.ZERO, forward, pc.Vec3.UP);
     const quat = new pc.Quat().setFromMat4(rotMat);
-    this.boatEntity.setRotation(quat);
+    this.logicalNode.setRotation(quat);
 
-    // Visual child node animation: Banking roll into turn + gentle wave rocking
+    // ==========================================
+    // VISUAL ANIMATION CHILD (Separated from physics)
+    // ==========================================
+    // 1. Water buoyancy vertical oscillation
+    const bob = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_BOB_FREQ) * GameConfig.BOAT.FLOAT_BOB_AMP;
+    this.visualRoot.setLocalPosition(0, bob, 0);
+
+    // 2. Dynamic Banking roll into turns + wave rocking (pitch & roll)
     const bankAngle = -(this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * GameConfig.BOAT.BANK_ANGLE_MAX;
     const waveRoll = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_ROLL_FREQ) * GameConfig.BOAT.FLOAT_ROLL_AMP;
     const wavePitch = Math.cos(this.animTimer * GameConfig.BOAT.FLOAT_PITCH_FREQ) * GameConfig.BOAT.FLOAT_PITCH_AMP;
@@ -234,15 +266,23 @@ export class BoatController {
       bankAngle + waveRoll
     );
 
-    // Pulse wake ripple ring
+    // 3. Water wake ripple ring pulse
     if (this.rippleEntity) {
-      const rippleScale = 1.0 + Math.sin(this.animTimer * 4.0) * 0.12;
-      this.rippleEntity.setLocalScale(1.8 * rippleScale, 1.0, 2.5 * rippleScale);
+      const pulse = 1.0 + Math.sin(this.animTimer * 4.2) * 0.12;
+      this.rippleEntity.setLocalScale(1.8 * pulse, 1.0, 2.5 * pulse);
     }
   }
 
+  // ==========================================
+  // GETTERS & PUBLIC API
+  // ==========================================
+
   public getEntity(): pc.Entity {
-    return this.boatEntity;
+    return this.logicalNode;
+  }
+
+  public getVisualRoot(): pc.Entity {
+    return this.visualRoot;
   }
 
   public getDistance(): number {
@@ -257,8 +297,20 @@ export class BoatController {
     return this.lateralVelocity;
   }
 
+  public getForwardSpeed(): number {
+    return this.currentForwardSpeed;
+  }
+
+  public getLogicalPosition(): pc.Vec3 {
+    return this.logicalNode.getPosition();
+  }
+
   public getPosition(): pc.Vec3 {
-    return this.boatEntity.getPosition();
+    return this.logicalNode.getPosition();
+  }
+
+  public isCollidingBoundary(): boolean {
+    return this.isAtBoundary;
   }
 
   public setBaseSpeed(speed: number): void {
@@ -267,5 +319,14 @@ export class BoatController {
 
   public nudgeLateral(amount: number): void {
     this.lateralVelocity += amount;
+  }
+
+  public setJoystickVisible(visible: boolean): void {
+    this.virtualJoystick?.setVisible(visible);
+  }
+
+  public destroy(): void {
+    this.virtualJoystick?.destroy();
+    this.logicalNode.destroy();
   }
 }

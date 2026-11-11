@@ -1,7 +1,8 @@
 import * as pc from 'playcanvas';
 import { RiverSystem } from './river/RiverSystem';
 import { RiverPathPresets } from './river/RiverPathPresets';
-import { PrototypeRiverCamera } from './camera/PrototypeRiverCamera';
+import { BoatController } from './boat/BoatController';
+import { RiverFollowCamera } from './camera/RiverFollowCamera';
 import { RiverDebugVisualizer } from './debug/RiverDebugVisualizer';
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -20,7 +21,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('resize', () => app.resizeCanvas());
 
-  // 2. Scene Lighting
+  // 2. Lighting: Directional sunlight & ambient sky fill
   const sunLight = new pc.Entity('SunLight');
   sunLight.addComponent('light', {
     type: 'directional',
@@ -39,10 +40,10 @@ window.addEventListener('DOMContentLoaded', () => {
   ambientFill.setEulerAngles(-60, 150, 0);
   app.root.addChild(ambientFill);
 
-  // 3. Initialize Procedural River System with Phase 1 Test Spline
+  // 3. Initialize Procedural River System (Preserving Phase 1)
   const river = new RiverSystem(app);
-  const testSplinePoints = RiverPathPresets.getPhase1TestRiver();
-  river.initFromPoints(testSplinePoints, {
+  const testRiverPoints = RiverPathPresets.getPhase1TestRiver();
+  river.initFromPoints(testRiverPoints, {
     stepSize: 1.5,
     crossSubdivisions: 4,
     bankWidth: 12.0,
@@ -51,120 +52,137 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const totalLength = river.getTotalLength();
 
-  // 4. Create Moving Probe (Test marker drifting along spline)
-  const probeEntity = new pc.Entity('SplineProbeMarker');
-  probeEntity.addComponent('render', {
-    type: 'cone'
-  });
-  probeEntity.setLocalScale(0.8, 1.2, 0.8);
-  probeEntity.setLocalEulerAngles(90, 0, 0);
+  // 4. Instantiate Hybrid Boat Controller
+  const boat = new BoatController(app, river);
+  boat.setPosition(2.0, 0.0);
 
-  const probeMat = new pc.StandardMaterial();
-  probeMat.diffuse = new pc.Color(0.15, 0.85, 0.75);
-  probeMat.emissive = new pc.Color(0.08, 0.45, 0.40);
-  probeMat.shininess = 64;
-  probeMat.update();
-  if (probeEntity.render?.meshInstances[0]) {
-    probeEntity.render.meshInstances[0].material = probeMat;
-  }
-  app.root.addChild(probeEntity);
+  // 5. Elevated Third-Person Follow Camera with Lookahead
+  const camera = new RiverFollowCamera(app, river, boat);
 
-  // 5. Prototype Camera
-  const camera = new PrototypeRiverCamera(app, river);
-
-  // 6. Debug Visualizer
+  // 6. Debug Visualizer (Preserving Phase 1)
   const debugVis = new RiverDebugVisualizer(app, river);
 
-  // State
-  let probeDistance = 0.0;
-  let probeSpeed = 5.0; // m/s
+  // 7. Telemetry & UI Bindings
+  const elDistance = document.getElementById('p2-metric-distance')!;
+  const elLateral = document.getElementById('p2-metric-lateral')!;
+  const elLatVel = document.getElementById('p2-metric-latvel')!;
+  const elSpeed = document.getElementById('p2-metric-speed')!;
+  const elWidth = document.getElementById('p2-metric-width')!;
+  const elBoundary = document.getElementById('p2-metric-boundary')!;
+  const elInput = document.getElementById('p2-metric-input')!;
+  const elBank = document.getElementById('p2-metric-bank')!;
+  const elSection = document.getElementById('p2-section-name')!;
+  const boundaryFlash = document.getElementById('boundary-flash')!;
+
+  const btnToggleDebug = document.getElementById('p2-btn-toggle-debug')!;
+  const btnToggleJoystick = document.getElementById('p2-btn-toggle-joystick')!;
+  const btnRestart = document.getElementById('p2-btn-restart')!;
+
+  let joystickVisible = true;
   let isPaused = false;
 
-  // DOM Elements
-  const elDistance = document.getElementById('metric-distance')!;
-  const elProgress = document.getElementById('metric-progress')!;
-  const elWidth = document.getElementById('metric-width')!;
-  const elCurvature = document.getElementById('metric-curvature')!;
-  const elTotal = document.getElementById('metric-total')!;
-  const elSpeed = document.getElementById('metric-speed')!;
-  const elSection = document.getElementById('section-indicator')!;
-  const btnToggleDebug = document.getElementById('btn-toggle-debug')!;
-  const btnTogglePause = document.getElementById('btn-toggle-pause')!;
-  const btnRestart = document.getElementById('btn-restart-probe')!;
-
-  elTotal.textContent = `${totalLength.toFixed(1)} m`;
-
   const getSectionName = (dist: number): string => {
-    if (dist < 35) return '1. Straight Section';
-    if (dist < 75) return '2. Gentle Left Turn';
-    if (dist < 120) return '3. Gentle Right Turn';
-    if (dist < 195) return '4. S-Shaped Turn';
-    if (dist < 240) return '5. Narrow Passage (Width 4.8m)';
-    if (dist < 285) return '6. Wide Section (Width 12.0m)';
-    return '7. Compound Left/Right Turns';
+    if (dist < 35) return '1. Straight Section (Base Speed 4.5m/s)';
+    if (dist < 75) return '2. Gentle Left Turn (Width 8.2m)';
+    if (dist < 120) return '3. Gentle Right Turn (Width 8.0m)';
+    if (dist < 195) return '4. S-Shaped Curve (Lateral Agility)';
+    if (dist < 240) return '5. Narrow Passage (Choke Point Width 4.8m - Current +20%)';
+    if (dist < 285) return '6. Wide Section (Expansive Basin Width 12.0m)';
+    return '7. Compound Left/Right Turns (Final Approach)';
+  };
+
+  // Bank Bump Event: Visual soft rebound feedback
+  boat.onBankBump = (side, velocity) => {
+    elBoundary.textContent = `BUMP (${side.toUpperCase()} ${velocity.toFixed(1)}m/s)`;
+    elBoundary.classList.add('alert');
+    boundaryFlash.classList.add('active');
+
+    setTimeout(() => {
+      elBoundary.classList.remove('alert');
+      boundaryFlash.classList.remove('active');
+    }, 350);
   };
 
   // Button Listeners
   btnToggleDebug.addEventListener('click', () => {
     const active = debugVis.toggle();
-    btnToggleDebug.textContent = active ? 'Hide Debug Vectors (D)' : 'Show Debug Vectors (D)';
+    btnToggleDebug.textContent = active ? 'Hide Vectors (D)' : 'Show Vectors (D)';
   });
 
-  btnTogglePause.addEventListener('click', () => {
-    isPaused = !isPaused;
-    btnTogglePause.textContent = isPaused ? 'Resume Probe' : 'Pause Probe';
+  btnToggleJoystick.addEventListener('click', () => {
+    joystickVisible = !joystickVisible;
+    boat.setJoystickVisible(joystickVisible);
+    btnToggleJoystick.textContent = joystickVisible ? 'Hide Joystick' : 'Show Joystick';
   });
 
-  btnRestart.addEventListener('click', () => {
-    probeDistance = 0.0;
+  const restartBoat = () => {
+    boat.setPosition(2.0, 0.0);
     camera.reset();
-  });
+  };
 
-  // Keyboard shortcut 'D' and 'Space'
+  btnRestart.addEventListener('click', restartBoat);
+
+  // Keyboard Shortcuts
   window.addEventListener('keydown', (e) => {
     if (e.code === 'KeyD') {
       const active = debugVis.toggle();
-      btnToggleDebug.textContent = active ? 'Hide Debug Vectors (D)' : 'Show Debug Vectors (D)';
+      btnToggleDebug.textContent = active ? 'Hide Vectors (D)' : 'Show Vectors (D)';
+    } else if (e.code === 'KeyR') {
+      restartBoat();
     } else if (e.code === 'Space') {
       isPaused = !isPaused;
-      btnTogglePause.textContent = isPaused ? 'Resume Probe' : 'Pause Probe';
     }
   });
 
-  // 7. Main Update Loop
+  // 8. Main Game Loop
   app.on('update', (dt: number) => {
     if (!isPaused && dt > 0) {
-      probeDistance += probeSpeed * dt;
-      if (probeDistance > totalLength) {
-        probeDistance = 0.0;
-        camera.reset();
-      }
+      boat.update(dt);
+      camera.update(dt);
     }
 
-    // River Frame evaluation
-    const frame = river.getFrameAtDistance(probeDistance);
-
-    // Update Probe Position & Rotation along spline
-    probeEntity.setPosition(frame.position.x, frame.position.y + 0.35, frame.position.z);
-
-    const rotMat = new pc.Mat4();
-    rotMat.setLookAt(pc.Vec3.ZERO, frame.tangent, pc.Vec3.UP);
-    probeEntity.setRotation(new pc.Quat().setFromMat4(rotMat));
-
-    // Update Prototype Follow Camera
-    camera.update(dt, probeDistance);
-
-    // Render Debug Lines
+    // Render debug vectors if enabled
     debugVis.render();
 
-    // Update UI Metrics
-    elDistance.textContent = `${probeDistance.toFixed(1)} m`;
-    elProgress.textContent = `${(frame.progress * 100).toFixed(1)}%`;
+    // Telemetry updates
+    const dist = boat.getDistance();
+    const lat = boat.getLateralOffset();
+    const latVel = boat.getLateralVelocity();
+    const fwdSpeed = boat.getForwardSpeed();
+    const frame = river.getFrameAtDistance(dist);
+
+    elDistance.textContent = `${dist.toFixed(1)} m / ${totalLength.toFixed(1)} m`;
+    elLateral.textContent = `${lat >= 0 ? '+' : ''}${lat.toFixed(2)} m`;
+    elLatVel.textContent = `${latVel.toFixed(2)} m/s`;
+    elSpeed.textContent = `${fwdSpeed.toFixed(1)} m/s`;
     elWidth.textContent = `${frame.width.toFixed(1)} m`;
-    elCurvature.textContent = `${frame.curvature.toFixed(2)} rad/m`;
-    elSpeed.textContent = `${probeSpeed.toFixed(1)} m/s`;
-    elSection.textContent = getSectionName(probeDistance);
+
+    if (!boat.isCollidingBoundary()) {
+      elBoundary.textContent = 'CLEAR';
+    }
+
+    // Active Input telemetry
+    const effectiveSteer = boat.getEffectiveSteerAxis();
+    if (Math.abs(effectiveSteer) > 0.05) {
+      elInput.textContent = `Steering (${effectiveSteer > 0 ? 'Right' : 'Left'} ${(Math.abs(effectiveSteer) * 100).toFixed(0)}%)`;
+    } else {
+      elInput.textContent = 'Idle (Center)';
+    }
+
+    // Banking angle
+    const bankDeg = -(latVel / 7.2) * 16.0;
+    elBank.textContent = `${bankDeg.toFixed(1)}°`;
+
+    // Active Section Banner
+    elSection.textContent = getSectionName(dist);
+
+    // Auto-loop test when reaching end
+    if (dist >= totalLength) {
+      setTimeout(() => {
+        restartBoat();
+      }, 500);
+    }
   });
 
-  console.log('Little Paper Boat — Phase 1 Procedural River Prototype ready.');
+  console.log('Little Paper Boat — Phase 2 Hybrid Boat Movement initialized.');
 });

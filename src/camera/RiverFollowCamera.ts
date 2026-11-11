@@ -24,7 +24,7 @@ export class RiverFollowCamera {
       clearColor: new pc.Color(0.72, 0.88, 0.95), // Soft pastel sky
       fov: GameConfig.CAMERA.FOV,
       nearClip: 0.1,
-      farClip: 350
+      farClip: 450
     });
     this.app.root.addChild(this.cameraEntity);
   }
@@ -39,27 +39,27 @@ export class RiverFollowCamera {
     const boatDist = this.boat.getDistance();
     const boatLat = this.boat.getLateralOffset();
 
-    // 1. Calculate ideal camera position behind the boat along river spline
+    // 1. Calculate camera position behind the boat along river spline
     const camSplineDist = Math.max(0, boatDist - GameConfig.CAMERA.FOLLOW_DISTANCE);
-    const camSample = this.river.sampleAtDistance(camSplineDist);
+    const camFrame = this.river.getFrameAtDistance(camSplineDist);
 
-    // Camera slightly tracks lateral boat movement (dampened to prevent motion sickness)
-    const dampenedLateral = boatLat * 0.45;
+    // Camera slightly tracks lateral boat movement (dampened to preserve smooth framing)
+    const dampenedLateral = boatLat * 0.40;
 
     const targetPos = new pc.Vec3(
-      camSample.position.x + camSample.normal.x * dampenedLateral,
-      camSample.position.y + GameConfig.CAMERA.ELEVATION,
-      camSample.position.z + camSample.normal.z * dampenedLateral
+      camFrame.position.x + camFrame.normal.x * dampenedLateral,
+      camFrame.position.y + GameConfig.CAMERA.ELEVATION,
+      camFrame.position.z + camFrame.normal.z * dampenedLateral
     );
 
     // 2. Calculate ideal lookahead target along the river spline
     const lookDist = Math.min(this.river.getTotalLength(), boatDist + GameConfig.CAMERA.LOOKAHEAD);
-    const lookSample = this.river.sampleAtDistance(lookDist);
+    const lookFrame = this.river.getFrameAtDistance(lookDist);
 
     const targetLook = new pc.Vec3(
-      lookSample.position.x + lookSample.normal.x * (boatLat * 0.25),
-      lookSample.position.y + 0.6,
-      lookSample.position.z + lookSample.normal.z * (boatLat * 0.25)
+      lookFrame.position.x + lookFrame.normal.x * (boatLat * 0.20),
+      lookFrame.position.y + 0.65,
+      lookFrame.position.z + lookFrame.normal.z * (boatLat * 0.20)
     );
 
     // 3. Smooth dampening / lerp

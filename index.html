@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Little Paper Boat — Phase 1 Procedural River Prototype</title>
+  <title>Little Paper Boat — Phase 2 Hybrid Boat Movement</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
       top: 0;
       z-index: 1;
     }
-    #debug-ui-overlay {
+    #phase2-overlay {
       position: absolute;
       left: 0;
       top: 0;
@@ -43,158 +43,185 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 18px 24px;
-    }
-    .hud-panel {
-      pointer-events: auto;
-      background: rgba(253, 251, 247, 0.92);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.85);
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(25, 45, 30, 0.15);
       padding: 16px 20px;
+    }
+    .hud-card {
+      pointer-events: auto;
+      background: rgba(253, 251, 247, 0.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 255, 255, 0.88);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(25, 45, 30, 0.16);
+      padding: 14px 18px;
       color: #244234;
       max-width: 440px;
+    }
+    .hud-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
     }
     .hud-title {
       font-size: 1.25rem;
       font-weight: 700;
       color: #1e5233;
-      margin-bottom: 2px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
-    .hud-subtitle {
-      font-size: 0.85rem;
-      color: #557762;
-      margin-bottom: 12px;
-    }
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 14px;
-      font-size: 0.88rem;
-      font-family: 'JetBrains Mono', monospace;
-      margin-bottom: 12px;
-      background: rgba(0, 0, 0, 0.04);
-      padding: 8px 12px;
-      border-radius: 8px;
-    }
-    .metric-label {
-      color: #5d7568;
-    }
-    .metric-val {
-      font-weight: 600;
-      color: #1a4d2e;
-      text-align: right;
-    }
-    .section-badge {
-      display: inline-block;
+    .phase-tag {
       background: #e8f5ec;
       border: 1px solid #99cda8;
       color: #1c5e34;
-      font-size: 0.82rem;
+      font-size: 0.76rem;
       font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 12px;
-      margin-bottom: 12px;
+      padding: 3px 8px;
+      border-radius: 10px;
     }
-    .btn-row {
+    .hud-sub {
+      font-size: 0.84rem;
+      color: #557762;
+      margin-bottom: 10px;
+    }
+    .section-banner {
+      display: inline-block;
+      background: #e2f0e6;
+      border-left: 4px solid #2d7a46;
+      color: #1c5e34;
+      font-size: 0.84rem;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    .metrics-table {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 12px;
+      font-size: 0.84rem;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 10px;
+      background: rgba(0, 0, 0, 0.03);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+    .m-label { color: #5d7568; }
+    .m-val { font-weight: 600; color: #1a4d2e; text-align: right; }
+    .m-val.alert { color: #d97706; font-weight: 700; }
+
+    .control-actions {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
     }
-    .proto-btn {
+    .cozy-btn {
       background: #2d7a46;
       color: #ffffff;
       border: none;
-      border-radius: 20px;
-      padding: 8px 16px;
-      font-size: 0.88rem;
+      border-radius: 18px;
+      padding: 7px 14px;
+      font-size: 0.84rem;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 3px 10px rgba(45, 122, 70, 0.3);
+      box-shadow: 0 3px 8px rgba(45, 122, 70, 0.25);
       transition: all 0.15s ease;
     }
-    .proto-btn:hover {
-      background: #24653a;
+    .cozy-btn:hover {
+      background: #236539;
       transform: translateY(-1px);
     }
-    .proto-btn.secondary {
+    .cozy-btn.secondary {
       background: #ffffff;
       color: #244234;
       border: 1.5px solid #a3ccb1;
     }
-    .proto-btn.secondary:hover {
+    .cozy-btn.secondary:hover {
       background: #eef6f1;
     }
-    .legend-box {
-      font-size: 0.8rem;
-      color: #3b5c49;
+
+    .instructions-card {
+      margin-top: auto;
+      max-width: 520px;
+      font-size: 0.82rem;
       line-height: 1.5;
+      color: #3b5c49;
     }
-    .legend-item {
-      display: inline-flex;
-      align-items: center;
-      margin-right: 12px;
+
+    .boundary-flash {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      box-shadow: inset 0 0 0 6px transparent;
+      transition: box-shadow 0.2s ease;
+      z-index: 5;
     }
-    .legend-color {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      margin-right: 5px;
-      display: inline-block;
+    .boundary-flash.active {
+      box-shadow: inset 0 0 0 6px rgba(245, 158, 11, 0.6);
     }
+
     @media (max-width: 600px) {
-      .hud-panel { max-width: 100%; padding: 12px 14px; }
-      .metrics-grid { font-size: 0.78rem; }
+      .hud-card { max-width: 100%; padding: 10px 14px; }
+      .metrics-table { font-size: 0.74rem; }
     }
   </style>
 </head>
 <body>
   <canvas id="application-canvas"></canvas>
-  <div id="debug-ui-overlay">
-    <!-- Top Left: River Metrics & Controls -->
-    <div class="hud-panel">
-      <div class="hud-title">
-        <span>⛵</span> Little Paper Boat
+  <div id="boundary-flash" class="boundary-flash"></div>
+  <div id="phase2-overlay">
+    <!-- Top Left: Live Telemetry & Control Panel -->
+    <div class="hud-card">
+      <div class="hud-header">
+        <span class="hud-title">⛵ Little Paper Boat</span>
+        <span class="phase-tag">Phase 2: Hybrid Boat Movement</span>
       </div>
-      <div class="hud-subtitle">Phase 1 — Procedural River Prototype</div>
-      <div id="section-indicator" class="section-badge">Section 1: Straight Flow</div>
+      <div class="hud-sub">Origami Boat Physics & Spline-Relative Navigation</div>
       
-      <div class="metrics-grid">
-        <span class="metric-label">Distance:</span>
-        <span id="metric-distance" class="metric-val">0.0 m</span>
-        <span class="metric-label">Progress:</span>
-        <span id="metric-progress" class="metric-val">0.0%</span>
-        <span class="metric-label">River Width:</span>
-        <span id="metric-width" class="metric-val">8.0 m</span>
-        <span class="metric-label">Curvature:</span>
-        <span id="metric-curvature" class="metric-val">0.00 rad/m</span>
-        <span class="metric-label">Total Length:</span>
-        <span id="metric-total" class="metric-val">0.0 m</span>
-        <span class="metric-label">Probe Speed:</span>
-        <span id="metric-speed" class="metric-val">5.0 m/s</span>
+      <div id="p2-section-name" class="section-banner">1. Straight Section</div>
+
+      <div class="metrics-table">
+        <span class="m-label">Spline Dist (s):</span>
+        <span id="p2-metric-distance" class="m-val">0.0 m</span>
+
+        <span class="m-label">Lateral (u):</span>
+        <span id="p2-metric-lateral" class="m-val">0.00 m</span>
+
+        <span class="m-label">Lateral Velocity:</span>
+        <span id="p2-metric-latvel" class="m-val">0.00 m/s</span>
+
+        <span class="m-label">Forward Speed:</span>
+        <span id="p2-metric-speed" class="m-val">4.8 m/s</span>
+
+        <span class="m-label">River Width W(s):</span>
+        <span id="p2-metric-width" class="m-val">8.0 m</span>
+
+        <span class="m-label">Boundary Margin:</span>
+        <span id="p2-metric-boundary" class="m-val">OK</span>
+
+        <span class="m-label">Active Input:</span>
+        <span id="p2-metric-input" class="m-val">Keyboard / Touch</span>
+
+        <span class="m-label">Visual Banking:</span>
+        <span id="p2-metric-bank" class="m-val">0.0°</span>
       </div>
 
-      <div class="btn-row">
-        <button id="btn-toggle-debug" class="proto-btn">Toggle Debug Vectors (D)</button>
-        <button id="btn-toggle-pause" class="proto-btn secondary">Pause Probe</button>
-        <button id="btn-restart-probe" class="proto-btn secondary">Restart</button>
+      <div class="control-actions">
+        <button id="p2-btn-toggle-debug" class="cozy-btn">Debug Vectors (D)</button>
+        <button id="p2-btn-toggle-joystick" class="cozy-btn secondary">Toggle Joystick</button>
+        <button id="p2-btn-restart" class="cozy-btn secondary">Restart (R)</button>
       </div>
     </div>
 
-    <!-- Bottom Left: Visualizer Legend -->
-    <div class="hud-panel legend-box" style="margin-top: auto; max-width: 480px;">
-      <div style="font-weight: 700; margin-bottom: 4px; color: #1e5233;">Debug Visualization Legend:</div>
-      <div>
-        <span class="legend-item"><span class="legend-color" style="background: #33f233;"></span>Tangent Vector</span>
-        <span class="legend-item"><span class="legend-color" style="background: #f24040;"></span>Normal Vector</span>
-        <span class="legend-item"><span class="legend-color" style="background: #19ccff;"></span>River Boundaries</span>
-        <span class="legend-item"><span class="legend-color" style="background: #ffd533;"></span>Width Bars & Control Points</span>
-      </div>
+    <!-- Bottom Left: Controls Guide -->
+    <div class="hud-card instructions-card">
+      <div style="font-weight: 700; color: #1e5233; margin-bottom: 2px;">Controls & Navigation Tests:</div>
+      <div>⌨️ <strong>Steer:</strong> <code>A</code> / <code>D</code> or <code>Left</code> / <code>Right</code> Arrow Keys</div>
+      <div>🖱️ <strong>Mouse Drag:</strong> Click & drag horizontally across the river</div>
+      <div>📱 <strong>Mobile Joystick:</strong> Drag the virtual joystick knob on bottom-left</div>
+      <div>🌊 <strong>Boundary Safety:</strong> Steer into river banks to test collision-ready soft bounce</div>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

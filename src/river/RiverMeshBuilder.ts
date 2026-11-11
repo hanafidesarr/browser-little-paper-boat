@@ -30,8 +30,8 @@ export class RiverMeshBuilder {
   ): RiverMeshResult {
     const stepSize = options.stepSize ?? 1.5;
     const crossSubs = Math.max(2, options.crossSubdivisions ?? 4);
-    const bankWidth = options.bankWidth ?? 12.0;
-    const bankHeight = options.bankHeight ?? 1.6;
+    const bankWidth = options.bankWidth ?? 15.0;
+    const bankHeight = options.bankHeight ?? 3.0;
 
     const totalLength = spline.getTotalLength();
     const sampleCount = Math.max(4, Math.ceil(totalLength / stepSize) + 1);
@@ -156,16 +156,22 @@ export class RiverMeshBuilder {
     bankWidth: number,
     bankHeight: number
   ): pc.Mesh {
-    // Bank Profile: Left and right banks meet exactly at water boundary
-    // Left Bank: Outer skirt -> Mid slope -> Shore edge (meets water)
-    // Right Bank: Shore edge (meets water) -> Mid slope -> Outer skirt
+    // Multi-tier Natural Riverbank Profile with Earthen Cutbank and High Plateau:
+    // Left Bank: Outer Plateau -> Upper Crest -> Dirt Bluff -> Cutbank -> Waterline Lip
+    // Right Bank: Waterline Lip -> Cutbank -> Dirt Bluff -> Upper Crest -> Outer Plateau
     const profile = [
-      { side: -1, extraLateral: bankWidth, heightFactor: 1.0, uvX: 0.0 }, // Left outer skirt
-      { side: -1, extraLateral: bankWidth * 0.35, heightFactor: 0.65, uvX: 0.25 }, // Left mid slope
-      { side: -1, extraLateral: 0.0, heightFactor: 0.0, uvX: 0.5 }, // Left shoreline (exact water edge)
-      { side: 1, extraLateral: 0.0, heightFactor: 0.0, uvX: 0.5 }, // Right shoreline (exact water edge)
-      { side: 1, extraLateral: bankWidth * 0.35, heightFactor: 0.65, uvX: 0.75 }, // Right mid slope
-      { side: 1, extraLateral: bankWidth, heightFactor: 1.0, uvX: 1.0 }  // Right outer skirt
+      // Left Bank (5 points)
+      { side: -1, extraLateral: bankWidth,        heightFactor: 1.00, uvX: 0.00 }, // Outer high meadow plateau
+      { side: -1, extraLateral: bankWidth * 0.46, heightFactor: 0.88, uvX: 0.18 }, // Upper meadow crest
+      { side: -1, extraLateral: bankWidth * 0.18, heightFactor: 0.50, uvX: 0.32 }, // Stratified dirt bluff
+      { side: -1, extraLateral: bankWidth * 0.04, heightFactor: 0.16, uvX: 0.43 }, // Moist river clay / cutbank
+      { side: -1, extraLateral: 0.0,              heightFactor: 0.00, uvX: 0.50 }, // Waterline silt contact
+      // Right Bank (5 points)
+      { side:  1, extraLateral: 0.0,              heightFactor: 0.00, uvX: 0.50 }, // Waterline silt contact
+      { side:  1, extraLateral: bankWidth * 0.04, heightFactor: 0.16, uvX: 0.57 }, // Moist river clay / cutbank
+      { side:  1, extraLateral: bankWidth * 0.18, heightFactor: 0.50, uvX: 0.68 }, // Stratified dirt bluff
+      { side:  1, extraLateral: bankWidth * 0.46, heightFactor: 0.88, uvX: 0.82 }, // Upper meadow crest
+      { side:  1, extraLateral: bankWidth,        heightFactor: 1.00, uvX: 1.00 }  // Outer high meadow plateau
     ];
 
     const numRows = samples.length;
@@ -195,12 +201,14 @@ export class RiverMeshBuilder {
         positions[vIdx * 3 + 1] = py;
         positions[vIdx * 3 + 2] = pz;
 
-        // Normal: outward horizontal + upward
-        normals[vIdx * 3 + 0] = sample.normal.x * p.side * 0.45;
-        normals[vIdx * 3 + 1] = 0.89;
-        normals[vIdx * 3 + 2] = sample.normal.z * p.side * 0.45;
+        // Normal: Outward slope tilt + upward normal
+        const slopeFactor = p.heightFactor > 0.85 ? 0.15 : (p.heightFactor > 0.3 ? 0.65 : 0.45);
+        normals[vIdx * 3 + 0] = sample.normal.x * p.side * slopeFactor;
+        normals[vIdx * 3 + 1] = Math.sqrt(Math.max(0.1, 1.0 - slopeFactor * slopeFactor));
+        normals[vIdx * 3 + 2] = sample.normal.z * p.side * slopeFactor;
 
-        uvs[uvIdx * 2 + 0] = p.uvX * 3.0;
+        // UV: U = cross-section texture coordinate, V = longitudinal distance
+        uvs[uvIdx * 2 + 0] = p.uvX;
         uvs[uvIdx * 2 + 1] = sample.distance / 12.0;
 
         vIdx++;
@@ -208,13 +216,14 @@ export class RiverMeshBuilder {
       }
     }
 
-    const totalQuads = (numRows - 1) * 4;
+    // 8 Quads per segment: 4 quads on Left Bank (0->1, 1->2, 2->3, 3->4) and 4 on Right Bank (5->6, 6->7, 7->8, 8->9)
+    const totalQuads = (numRows - 1) * 8;
     const indices = new Uint16Array(totalQuads * 6);
     let idx = 0;
 
     for (let r = 0; r < numRows - 1; r++) {
-      // Left Bank quads (columns 0->1 and 1->2)
-      for (let c = 0; c < 2; c++) {
+      // Left Bank Quads
+      for (let c = 0; c < 4; c++) {
         const tl = r * numCols + c;
         const tr = tl + 1;
         const bl = (r + 1) * numCols + c;
@@ -229,8 +238,8 @@ export class RiverMeshBuilder {
         indices[idx++] = bl;
       }
 
-      // Right Bank quads (columns 3->4 and 4->5)
-      for (let c = 3; c < 5; c++) {
+      // Right Bank Quads
+      for (let c = 5; c < 9; c++) {
         const tl = r * numCols + c;
         const tr = tl + 1;
         const bl = (r + 1) * numCols + c;
@@ -258,59 +267,101 @@ export class RiverMeshBuilder {
 
   private static createDefaultWaterMaterial(): pc.StandardMaterial {
     const mat = new pc.StandardMaterial();
-    mat.diffuse = new pc.Color(0.24, 0.65, 0.78);
+    mat.diffuse = new pc.Color(0.20, 0.68, 0.76);
     mat.ambient = new pc.Color(0.18, 0.48, 0.58);
-    mat.shininess = 64;
-    mat.opacity = 0.88;
+    mat.shininess = 24;
+    mat.opacity = 0.38; // Crystal-clear bening water
     mat.blendType = pc.BLEND_NORMAL;
     mat.cull = pc.CULLFACE_NONE;
     mat.update();
     return mat;
   }
 
-  private static createDefaultBankMaterial(device: pc.GraphicsDevice): pc.StandardMaterial {
+  public static createDefaultBankMaterial(device: pc.GraphicsDevice, customTint?: pc.Color): pc.StandardMaterial {
     const mat = new pc.StandardMaterial();
 
-    // Procedural hand-painted shoreline & grass gradient texture
-    const size = 256;
+    // Procedural hand-painted riverbank cross-section:
+    // Outer grass -> mossy transition -> rich brown dirt bluff -> wet dark clay -> waterline silt
+    const size = 512;
     const canvas = document.createElement('canvas');
     canvas.width = size;
-    canvas.height = size;
+    canvas.height = 256;
     const ctx = canvas.getContext('2d')!;
 
-    // Horizontal cross-section: 0.0 (outer left) -> 0.5 (shoreline) -> 1.0 (outer right)
+    // 1. Base Earth & Meadow Gradient across the river profile
     const grad = ctx.createLinearGradient(0, 0, size, 0);
-    grad.addColorStop(0.0, '#2d5c28'); // Outer forest grass
-    grad.addColorStop(0.25, '#3b7834'); // Mid slope meadow
-    grad.addColorStop(0.46, '#567540'); // Wet shoreline moss
-    grad.addColorStop(0.50, '#6d7550'); // Sandy pebble water contact
-    grad.addColorStop(0.54, '#567540'); // Wet shoreline moss
-    grad.addColorStop(0.75, '#3b7834'); // Mid slope meadow
-    grad.addColorStop(1.0, '#2d5c28'); // Outer forest grass
+    grad.addColorStop(0.00, '#2d5e27'); // Outer meadow grass
+    grad.addColorStop(0.14, '#3c7934'); // Lush plateau grass
+    grad.addColorStop(0.22, '#507c36'); // Embankment crest
+    grad.addColorStop(0.28, '#696836'); // Mossy soil transition
+    grad.addColorStop(0.34, '#7c572e'); // Warm brown soil / dirt bluff
+    grad.addColorStop(0.40, '#664523'); // Stratified cutbank earth
+    grad.addColorStop(0.46, '#4f351a'); // Wet shoreline dark clay
+    grad.addColorStop(0.50, '#5a462e'); // Silt & sand lip at waterline
+    // Right side mirror
+    grad.addColorStop(0.54, '#4f351a'); // Wet shoreline dark clay
+    grad.addColorStop(0.60, '#664523'); // Stratified cutbank earth
+    grad.addColorStop(0.66, '#7c572e'); // Warm brown soil / dirt bluff
+    grad.addColorStop(0.72, '#696836'); // Mossy soil transition
+    grad.addColorStop(0.78, '#507c36'); // Embankment crest
+    grad.addColorStop(0.86, '#3c7934'); // Lush plateau grass
+    grad.addColorStop(1.00, '#2d5e27'); // Outer meadow grass
 
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, size, 256);
 
-    // Subtle soft grass noise
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-    for (let i = 0; i < 60; i++) {
-      ctx.fillRect(Math.random() * size, Math.random() * size, Math.random() * 8 + 2, Math.random() * 8 + 2);
+    // 2. Stratified Earth Layers and Dirt Specks on the cutbank zones
+    ctx.fillStyle = 'rgba(40, 24, 10, 0.22)';
+    for (let i = 0; i < 40; i++) {
+      const y = Math.random() * 256;
+      // Draw horizontal soil strata in the dirt zone (left & right)
+      const xLeft = 145 + Math.random() * 85;
+      const xRight = 282 + Math.random() * 85;
+      const w = 20 + Math.random() * 45;
+      ctx.fillRect(xLeft, y, w, 2.5);
+      ctx.fillRect(xRight, y, w, 2.5);
+    }
+
+    // 3. Natural Organic Dirt Pebbles & Small River Stones
+    ctx.fillStyle = 'rgba(165, 140, 105, 0.35)';
+    for (let j = 0; j < 65; j++) {
+      const y = Math.random() * 256;
+      const xLeft = 160 + Math.random() * 80;
+      const xRight = 270 + Math.random() * 80;
+      const r = 1.2 + Math.random() * 2.2;
+      ctx.beginPath();
+      ctx.arc(xLeft, y, r, 0, Math.PI * 2);
+      ctx.arc(xRight, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 4. Subtle Grass Tufts on the Upper Plateaus
+    ctx.fillStyle = 'rgba(85, 160, 65, 0.25)';
+    for (let k = 0; k < 50; k++) {
+      const y = Math.random() * 256;
+      const x1 = Math.random() * 95;
+      const x2 = 417 + Math.random() * 95;
+      ctx.fillRect(x1, y, 4, 8);
+      ctx.fillRect(x2, y, 4, 8);
     }
 
     const texture = new pc.Texture(device, {
       width: size,
-      height: size,
+      height: 256,
       format: pc.PIXELFORMAT_RGBA8,
       addressU: pc.ADDRESS_CLAMP_TO_EDGE,
       addressV: pc.ADDRESS_REPEAT,
-      minFilter: pc.FILTER_LINEAR,
-      magFilter: pc.FILTER_LINEAR
+      minFilter: pc.FILTER_LINEAR_MIPMAP_LINEAR,
+      magFilter: pc.FILTER_LINEAR,
+      mipmaps: true
     });
     texture.setSource(canvas);
 
-    mat.diffuse = new pc.Color(1.0, 1.0, 1.0);
+    mat.diffuse = customTint ?? new pc.Color(1.0, 1.0, 1.0);
     mat.diffuseMap = texture;
-    mat.ambient = new pc.Color(0.28, 0.45, 0.25);
+    mat.ambient = new pc.Color(0.35, 0.42, 0.32);
+    mat.specular = new pc.Color(0.04, 0.04, 0.04);
+    mat.shininess = 8;
     mat.cull = pc.CULLFACE_NONE;
     mat.update();
     return mat;

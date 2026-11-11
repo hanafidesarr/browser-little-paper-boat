@@ -10,6 +10,7 @@ import { EffectManager } from '../particles/EffectManager';
 import { AudioManager } from '../audio/AudioManager';
 import { FinishGate } from '../environment/FinishGate';
 import { WaterMaterial } from '../water/WaterMaterial';
+import { RiverMeshBuilder } from '../river/RiverMeshBuilder';
 import { LEVEL_DATA } from './LevelData';
 import { LevelConfig } from './LevelConfig';
 
@@ -75,26 +76,23 @@ export class LevelManager {
     const { material: waterMat, update: waterUpdate } = WaterMaterial.create(
       this.app.graphicsDevice,
       config.environment.waterTint,
-      0.88
+      0.38 // Crystal-clear transparent water
     );
     this.waterUpdateFn = waterUpdate;
 
-    const bankMat = new pc.StandardMaterial();
-    bankMat.diffuse = config.environment.bankTint;
-    bankMat.ambient = new pc.Color(
-      config.environment.bankTint.r * 0.7,
-      config.environment.bankTint.g * 0.7,
-      config.environment.bankTint.b * 0.7
+    // Rich procedural dirt-to-grass riverbank material with level tint
+    const bankMat = RiverMeshBuilder.createDefaultBankMaterial(
+      this.app.graphicsDevice,
+      config.environment.bankTint
     );
-    bankMat.update();
 
-    // 2. Build River Spline & Meshes
+    // 2. Build River Spline & Meshes (Elevated 3.0m land with 15m wide embankments)
     this.river.initFromPoints(config.splinePoints, {
       waterMaterial: waterMat,
       bankMaterial: bankMat,
       stepSize: 1.5,
-      bankWidth: 12.0,
-      bankHeight: 1.8
+      bankWidth: 15.0,
+      bankHeight: 3.0
     });
 
     // 3. Reset Boat to start

@@ -64,9 +64,9 @@ export class BoatController {
     this.visualRoot = this.logicalNode.findByName('VisualRoot') as pc.Entity;
     this.app.root.addChild(this.logicalNode);
 
-    // 2. Create water wake ripple ring under boat (attached to visual root)
+    // 2. Create water wake ripple ring under boat (attached flat to logical node, not tilting child)
     this.rippleEntity = this.createRippleDisc();
-    this.visualRoot.addChild(this.rippleEntity);
+    this.logicalNode.addChild(this.rippleEntity);
 
     // 3. Initialize Input Systems
     this.bindKeyboardInputs();
@@ -130,8 +130,8 @@ export class BoatController {
     ring.addComponent('render', {
       type: 'plane'
     });
-    ring.setLocalScale(2.2, 1.0, 3.2);
-    ring.setLocalPosition(0, 0.02, 0);
+    ring.setLocalScale(2.0, 1.0, 2.8);
+    ring.setLocalPosition(0, 0.015, 0);
 
     // Create a circular ripple alpha texture on an offscreen canvas
     const size = 128;
@@ -143,8 +143,8 @@ export class BoatController {
     const center = size / 2;
     const grad = ctx.createRadialGradient(center, center, size * 0.15, center, center, size * 0.48);
     grad.addColorStop(0.0, 'rgba(255, 255, 255, 0.0)');
-    grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
-    grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.2)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.45)');
+    grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.15)');
     grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
 
     ctx.fillStyle = grad;
@@ -164,8 +164,9 @@ export class BoatController {
     ringMat.diffuse = new pc.Color(1.0, 1.0, 1.0);
     ringMat.opacityMap = texture;
     ringMat.opacityMapChannel = 'a';
-    ringMat.opacity = 0.5;
+    ringMat.opacity = 0.42;
     ringMat.blendType = pc.BLEND_NORMAL;
+    ringMat.depthWrite = false; // Prevent Z-fighting and flickering with hull
     ringMat.cull = pc.CULLFACE_NONE;
     ringMat.update();
 
@@ -279,12 +280,8 @@ export class BoatController {
     // 0. Timers
     if (this.invulnerabilityTimer > 0) {
       this.invulnerabilityTimer -= dt;
-      // Soft blinking visual feedback during invulnerability
-      const blink = Math.floor(this.invulnerabilityTimer * 12) % 2 === 0;
-      this.visualRoot.enabled = blink;
-      if (this.invulnerabilityTimer <= 0) {
-        this.visualRoot.enabled = true;
-      }
+      // Stable solid boat rendering (no strobe flicker or glitch)
+      this.visualRoot.enabled = true;
     }
 
     if (this.speedModifierTimer > 0) {

@@ -25,6 +25,22 @@ export class EnvironmentManager {
     this.app.root.addChild(this.rootEntity);
   }
 
+  private getBankElevation(extraDist: number, bankHeight: number = 3.0, bankWidth: number = 15.0): number {
+    const norm = Math.max(0, Math.min(1.0, extraDist / bankWidth));
+    if (norm < 0.04) {
+      return (norm / 0.04) * 0.16 * bankHeight;
+    } else if (norm < 0.18) {
+      const t = (norm - 0.04) / 0.14;
+      return (0.16 + t * 0.34) * bankHeight;
+    } else if (norm < 0.46) {
+      const t = (norm - 0.18) / 0.28;
+      return (0.50 + t * 0.38) * bankHeight;
+    } else {
+      const t = Math.min(1.0, (norm - 0.46) / 0.54);
+      return (0.88 + t * 0.12) * bankHeight;
+    }
+  }
+
   public populate(options: EnvironmentOptions = {}): void {
     this.clear();
 
@@ -48,10 +64,12 @@ export class EnvironmentManager {
 
       // Left Bank Tree
       if (rng() > 0.2) {
-        const leftDist = -halfW - 2.8 - rng() * 4.5;
+        const extra = 2.8 + rng() * 5.0;
+        const leftDist = -halfW - extra;
+        const bankY = this.getBankElevation(extra);
         const treePos = new pc.Vec3(
           frame.position.x + frame.normal.x * leftDist,
-          frame.position.y + 0.35 + rng() * 0.4,
+          frame.position.y + bankY,
           frame.position.z + frame.normal.z * leftDist
         );
         const tree = rng() > 0.45 
@@ -66,10 +84,12 @@ export class EnvironmentManager {
 
       // Right Bank Tree
       if (rng() > 0.2) {
-        const rightDist = halfW + 2.8 + rng() * 4.5;
+        const extra = 2.8 + rng() * 5.0;
+        const rightDist = halfW + extra;
+        const bankY = this.getBankElevation(extra);
         const treePos = new pc.Vec3(
           frame.position.x + frame.normal.x * rightDist,
-          frame.position.y + 0.35 + rng() * 0.4,
+          frame.position.y + bankY,
           frame.position.z + frame.normal.z * rightDist
         );
         const tree = rng() > 0.45 
@@ -91,10 +111,12 @@ export class EnvironmentManager {
 
       [-1, 1].forEach(side => {
         if (rng() > 0.35) {
-          const lat = side * (halfW + 0.8 + rng() * 2.2);
+          const extra = 0.8 + rng() * 3.0;
+          const lat = side * (halfW + extra);
+          const bankY = this.getBankElevation(extra);
           const pos = new pc.Vec3(
             frame.position.x + frame.normal.x * lat,
-            frame.position.y + 0.15,
+            frame.position.y + bankY,
             frame.position.z + frame.normal.z * lat
           );
 
@@ -119,12 +141,14 @@ export class EnvironmentManager {
       const frame = this.river.getFrameAtDistance(s);
       const halfW = frame.width * 0.5;
       const side = rng() > 0.5 ? 1 : -1;
-      const rockDist = side * (halfW + 0.6 + rng() * 1.6);
+      const extra = 0.4 + rng() * 1.8;
+      const rockDist = side * (halfW + extra);
+      const bankY = this.getBankElevation(extra);
 
       const rock = NatureMeshes.createRiverRock(0.75 + rng() * 0.55);
       rock.setPosition(
         frame.position.x + frame.normal.x * rockDist,
-        frame.position.y + 0.1,
+        frame.position.y + bankY * 0.7,
         frame.position.z + frame.normal.z * rockDist
       );
       rock.setEulerAngles(rng() * 12, rng() * 360, rng() * 12);

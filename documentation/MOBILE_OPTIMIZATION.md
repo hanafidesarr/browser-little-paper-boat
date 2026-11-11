@@ -51,35 +51,31 @@ Previously, water splashes created in `EffectManager.ts` utilized `entity.addCom
 
 ---
 
-## 3. Water Rendering & Visual Polish (7 Core Refinements)
+## 3. Water & Land Visual Polish (Visual Realism Refinements)
 
-### 1. Water Glare Elimination
-- Reduced water specular highlight from `Color(0.88, 0.96, 1.0)` down to `Color(0.04, 0.06, 0.08)` and lowered shininess from 64 to 16.
-- Directional sun intensity softened to 1.15 and ambient fill to 0.58.
-- Harsh white diamond caustics eliminated in favor of gentle, soft watercolor caustics.
+### 1. Paper Boat Stability & Glitch Elimination (No Flickering)
+- **Strobe Fix:** Removed `visualRoot.enabled = blink` which previously caused the paper boat to rapidly flicker on/off at 12 Hz whenever invulnerability was active after respawns or damage. Mesh visibility is now continuously preserved (`enabled = true`).
+- **Wake Decal Slicing Fix:** Set `depthWrite = false` on `BoatWakeRing` and attached it flat to the logical navigation root at `y = 0.015`, preventing the wake disc from tilting and slicing through the boat hull in 3D space.
+- **Origami Mesh Manifold:** Rebuilt procedural faces in [`PaperBoatMesh.ts`](file:///Users/hanafidesar/Documents/MYPROJECT/GAME%20BROWSER/little-paper-boat/src/boat/PaperBoatMesh.ts) into a clean, non-overlapping origami manifold. Removed co-planar duplicate vertices at prow/stern, eliminating Z-fighting along fold seams.
 
-### 2. Multi-Octave Small Waves (Gelombang Kecil)
-- Generated procedural high-frequency normal texture combining 3 wave harmonics: longitudinal current ripples, diagonal crossing waves, and fine capillary micro-ripples.
-- Continuous dual-phase UV scrolling offset in update loop creates living river surface motion.
+### 2. Elevated Land & Earthen Soil Riverbank Transition
+- **Elevated Land:** Riverbank height increased to `3.0m` (from 1.6m) and width to `15.0m`, sculpting an authentic natural river valley/canyon embankment.
+- **10-Column Multi-Tier Profile:**
+  - Waterline silt & sand lip (`height 0.0m`).
+  - Moist dark river clay / cutbank (`height 0.48m`).
+  - Stratified brown dirt bluff / cutbank (`height 1.50m`).
+  - Upper meadow grass crest (`height 2.64m`).
+  - Outer elevated grass plateau (`height 3.00m`).
+- **Rich Procedural Dirt-to-Grass Material:** Hand-painted 512x256 texture featuring exposed stratified soil, natural dirt pebbles, and lush green grass transitions ([`RiverMeshBuilder.ts`](file:///Users/hanafidesar/Documents/MYPROJECT/GAME%20BROWSER/little-paper-boat/src/river/RiverMeshBuilder.ts#L270-L330)).
+- **Surface Elevation Alignment:** Nature elements (trees, grass tufts, flower clusters, and rocks) in [`EnvironmentManager.ts`](file:///Users/hanafidesar/Documents/MYPROJECT/GAME%20BROWSER/little-paper-boat/src/environment/EnvironmentManager.ts#L25-L105) sit directly on the elevated terrain profile according to their lateral offset.
 
-### 3. Under-Boat Hull Wake & Flank Ripples
-- Added `EffectManager.spawnBoatWaterInteraction(...)`:
-  - Central displacement ripple under the hull at waterline (`y = 0.026`).
-  - Dual bow V-ripples branching outward along the boat's flanks.
-  - Micro-foam bubbles and droplets during sharp turns and banking.
-
-### 4. Crystal-Clear Transparent Water (Bening)
-- Water opacity lowered to `0.54` for crystalline clarity revealing the cupped riverbed beneath.
-- Translucent caustics canvas background (`rgba(28, 120, 145, 0.30)` to `rgba(48, 170, 185, 0.15)`).
-
-### 5. Touchpad Navigation (No Virtual Joystick)
-- Virtual joystick visually hidden (`display: none !important; pointer-events: none !important;`).
-- Direct screen touchpad dragging implemented on canvas with smooth sensitivity and horizontal drift compensation.
-
-### 6. Authentic Origami Paper Material (Zero Black Faces)
-- High-res procedural washi paper texture with subtle organic fibers (`#faf8f2`).
-- Flat normal vectors sanitized (`norm.y < -0.15 => norm.mulScalar(-1)`).
-- Material configured with `twoSidedLighting: true`, `cull: CULLFACE_NONE`, `emissive: Color(0.24, 0.23, 0.22)` for paper subsurface translucency, warm ambient `Color(0.85, 0.83, 0.80)`, and soft matte specular `Color(0.06, 0.06, 0.06)`. Absolutely zero pitch-black polygons.
+### 3. Ultra Crystal-Clear Water with Non-Repeating Waves (Bening & Gelombang Ombak)
+- **Ultra Crystal-Clear (Bening Sekali):** Water opacity set to `0.38` with an ultra-translucent aquatic background gradient (`rgba(20, 110, 132, 0.16)` to `rgba(42, 170, 185, 0.05)`). The riverbed, submerged stones, and underwater depths are completely visible.
+- **Rolling Wave Crests (Gelombang Ombak):** High-density normal map combines 4 wave harmonics: primary Gerstner-style rolling river swells, crossing diagonal wave crests, surface chop, and capillary micro-ripples.
+- **Zero Visible Texture Repetition:**
+  - Incommensurate irrational tiling factors (`diffuseMapTiling = Vec2(1.73, 4.19)`, `normalMapTiling = Vec2(3.37, 8.63)`).
+  - Dual-speed, opposite-drift UV scrolling: the caustics layer and the wave normal layer continuously glide across each other at different velocities and opposite angles, producing dynamic non-repeating wave interference.
+  - 100% optimized for mobile browsers at 60 FPS using standard PlayCanvas materials without costly shader recompilations.
 
 ---
 

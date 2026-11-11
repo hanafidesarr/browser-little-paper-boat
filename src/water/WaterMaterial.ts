@@ -6,9 +6,8 @@ export class WaterMaterial {
   private static foamTexture: pc.Texture | null = null;
 
   /**
-   * Generates a crystal-clear (bening) river caustics texture.
-   * Completely transparent background with gentle soft aquatic caustics.
-   * Harsh blinding white glints are completely eliminated.
+   * Generates a crystal-clear (bening sekali) river caustics texture with organic cellular web patterns.
+   * Completely breaks texture repetition by avoiding modulo grid alignment.
    */
   public static getCausticTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.waterTexture) return this.waterTexture;
@@ -19,45 +18,54 @@ export class WaterMaterial {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Crystal-clear aquatic gradient (semi-transparent so riverbed is clearly visible)
+    // 1. Crystal-clear aquatic gradient (ultra-translucent so riverbed is clearly visible)
     const bgGrad = ctx.createLinearGradient(0, 0, size, size);
-    bgGrad.addColorStop(0.0, 'rgba(28, 120, 145, 0.30)'); // Soft turquoise depth
-    bgGrad.addColorStop(0.5, 'rgba(38, 155, 175, 0.20)'); // Crystalline mid-stream
-    bgGrad.addColorStop(1.0, 'rgba(48, 170, 185, 0.15)'); // Clear shallow aqua
+    bgGrad.addColorStop(0.0, 'rgba(20, 110, 132, 0.16)'); // Clear turquoise depth
+    bgGrad.addColorStop(0.5, 'rgba(32, 145, 168, 0.10)'); // Crystalline mid-stream
+    bgGrad.addColorStop(1.0, 'rgba(42, 170, 185, 0.05)'); // Ultra-clear shallow aqua
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Soft subtle watercolor caustics (gentle ripples, NO harsh white glare)
+    // 2. Organic Non-Repeating Cellular Caustics (multi-scale organic curves, zero grid repetition)
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Primary gentle caustic ripples (soft translucent cyan)
-    ctx.strokeStyle = 'rgba(215, 245, 252, 0.20)';
-    ctx.lineWidth = 6;
-    for (let i = 0; i < 40; i++) {
-      const cx = (i * 47) % size;
-      const cy = (i * 73) % size;
-      const r = 26 + ((i * 23) % 40);
+    // Seeded pseudo-random generator for deterministic non-grid organic caustics
+    let seed = 4289;
+    const rnd = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+
+    // Primary broad organic caustic bands (soft translucent cyan)
+    ctx.strokeStyle = 'rgba(210, 245, 252, 0.18)';
+    ctx.lineWidth = 5.5;
+    for (let i = 0; i < 35; i++) {
+      const x1 = rnd() * size;
+      const y1 = rnd() * size;
+      const x2 = (x1 + (rnd() - 0.5) * 140 + size) % size;
+      const y2 = (y1 + (rnd() - 0.5) * 140 + size) % size;
+      const cx = (x1 + x2) * 0.5 + (rnd() - 0.5) * 50;
+      const cy = (y1 + y2) * 0.5 + (rnd() - 0.5) * 50;
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0.1, Math.PI * 1.5);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(cx + r * 0.6, cy + r * 0.4, r * 0.75, Math.PI * 0.5, Math.PI * 1.9);
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(cx, cy, x2, y2);
       ctx.stroke();
     }
 
     // Secondary delicate ripple threads
-    ctx.strokeStyle = 'rgba(230, 250, 255, 0.16)';
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 50; i++) {
-      const cx = (i * 61 + 31) % size;
-      const cy = (i * 37 + 19) % size;
-      const r = 16 + ((i * 17) % 28);
+    ctx.strokeStyle = 'rgba(225, 250, 255, 0.14)';
+    ctx.lineWidth = 2.8;
+    for (let j = 0; j < 48; j++) {
+      const cx = rnd() * size;
+      const cy = rnd() * size;
+      const r = 14 + rnd() * 32;
+      const startAngle = rnd() * Math.PI * 2;
+      const endAngle = startAngle + Math.PI * (0.8 + rnd() * 0.8);
 
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0.3, Math.PI * 1.6);
+      ctx.arc(cx, cy, r, startAngle, endAngle);
       ctx.stroke();
     }
 
@@ -78,8 +86,8 @@ export class WaterMaterial {
   }
 
   /**
-   * Generates a high-density, multi-octave normal map for delicate small waves (gelombang kecil).
-   * Combines longitudinal ripples, diagonal crossing waves, and fine capillary micro-ripples.
+   * Generates a high-density, multi-octave normal map with authentic rolling wave swells (gelombang ombak).
+   * Combines primary Gerstner-style rolling swells, crossing diagonal waves, surface chop, and micro-ripples.
    */
   public static getRippleNormalTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.rippleNormalTexture) return this.rippleNormalTexture;
@@ -98,21 +106,27 @@ export class WaterMaterial {
         const u = (x / size) * Math.PI * 2;
         const v = (y / size) * Math.PI * 2;
 
-        // Wave Harmonics for visible small ripples (gelombang kecil):
-        // 1. Longitudinal current ripples
-        const dX1 = Math.sin(u * 8.0 + v * 4.0) * 0.42;
-        const dY1 = Math.cos(v * 8.0 - u * 3.0) * 0.42;
+        // Wave Harmonics for authentic rolling waves (gelombang ombak):
+        // 1. Primary rolling river wave swells (peaked crests along current)
+        const wavePhase1 = v * 3.5 + u * 1.5;
+        const dX1 = (Math.sin(wavePhase1) - 0.28 * Math.cos(wavePhase1 * 2.0)) * 0.48;
+        const dY1 = (Math.cos(wavePhase1) + 0.28 * Math.sin(wavePhase1 * 2.0)) * 0.58;
 
-        // 2. Crossing diagonal small waves (gelombang kecil beriak)
-        const dX2 = Math.cos(u * 16.0 - v * 12.0) * 0.28;
-        const dY2 = Math.sin(u * 12.0 + v * 14.0) * 0.28;
+        // 2. Secondary diagonal crossing wave swells (gelombang silang)
+        const wavePhase2 = u * 4.8 - v * 3.2 + 1.2;
+        const dX2 = Math.sin(wavePhase2) * 0.32;
+        const dY2 = Math.cos(wavePhase2) * 0.28;
 
-        // 3. Delicate capillary surface ripples
-        const dX3 = Math.sin(u * 28.0 + v * 22.0) * 0.16;
-        const dY3 = Math.cos(u * 22.0 - v * 28.0) * 0.16;
+        // 3. Surface chop / medium waves
+        const dX3 = Math.cos(u * 9.6 + v * 8.2) * 0.20;
+        const dY3 = Math.sin(u * 8.4 - v * 10.6) * 0.20;
 
-        const nx = dX1 + dX2 + dX3;
-        const ny = dY1 + dY2 + dY3;
+        // 4. Fine capillary micro-ripples
+        const dX4 = Math.sin(u * 18.0 - v * 16.0) * 0.12;
+        const dY4 = Math.cos(u * 16.0 + v * 18.0) * 0.12;
+
+        const nx = dX1 + dX2 + dX3 + dX4;
+        const ny = dY1 + dY2 + dY3 + dY4;
         const nz = 1.0;
 
         const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
@@ -191,55 +205,60 @@ export class WaterMaterial {
   }
 
   /**
-   * Creates the crystal-clear (bening) water material with delicate small waves (gelombang kecil)
-   * and soft matte lighting with zero harsh glare.
+   * Creates crystal-clear (bening sekali) water material with authentic rolling waves (gelombang ombak)
+   * and non-repeating dual-speed incommensurate UV animation (optimized for 60 FPS mobile).
    */
   public static create(
     device: pc.GraphicsDevice,
-    tint: pc.Color = new pc.Color(0.25, 0.75, 0.82),
-    opacity: number = 0.54 // Crystal-clear bening water transparency
+    tint: pc.Color = new pc.Color(0.20, 0.68, 0.76),
+    opacity: number = 0.38 // Ultra crystal-clear bening water transparency
   ): { material: pc.StandardMaterial; update: (dt: number, speed: number) => void } {
     const material = new pc.StandardMaterial();
     const diffuseTex = this.getCausticTexture(device);
     const normalTex = this.getRippleNormalTexture(device);
 
     material.diffuse = tint;
-    material.ambient = new pc.Color(0.20, 0.50, 0.58);
+    material.ambient = new pc.Color(0.18, 0.48, 0.58);
 
-    // Primary diffuse caustic map
+    // Primary diffuse caustic map (incommensurate irrational tiling)
     material.diffuseMap = diffuseTex;
-    material.diffuseMapTiling = new pc.Vec2(2.5, 7.5);
+    material.diffuseMapTiling = new pc.Vec2(1.73, 4.19);
     material.diffuseMapOffset = new pc.Vec2(0, 0);
 
-    // Multi-octave small ripples (gelombang kecil)
+    // Multi-octave rolling wave swells normal map (non-harmonic irrational tiling)
     material.normalMap = normalTex;
-    material.normalMapTiling = new pc.Vec2(5.5, 16.0); // Dense small ripples
+    material.normalMapTiling = new pc.Vec2(3.37, 8.63);
     material.normalMapOffset = new pc.Vec2(0, 0);
-    material.bumpiness = 0.36; // Clearly visible ripples without harsh reflection
+    material.bumpiness = 0.42; // Clearly sculpted wave swells without harsh glare
 
-    // Toned-down specular: soft matte water with ZERO blinding white glare
-    material.specular = new pc.Color(0.04, 0.06, 0.08); // Very soft, gentle reflection
-    material.shininess = 16;
+    // Gentle matte specular: soft natural light response with ZERO blinding glare
+    material.specular = new pc.Color(0.04, 0.06, 0.08);
+    material.shininess = 20;
     material.opacity = opacity;
     material.blendType = pc.BLEND_NORMAL;
     material.cull = pc.CULLFACE_NONE;
     material.update();
 
-    let offsetV = 0;
-    let offsetU = 0;
+    let offsetV1 = 0;
+    let offsetU1 = 0;
+    let offsetV2 = 0;
+    let offsetU2 = 0;
 
     const update = (dt: number, flowSpeed: number) => {
-      // Primary longitudinal flow along the river spline
-      offsetV = (offsetV - dt * flowSpeed * 0.07) % 1.0;
-      // Secondary cross-flow diagonal ripple movement (gelombang kecil)
-      offsetU = (offsetU + dt * 0.025) % 1.0;
+      // Layer 1 (Caustic map): flows along river at base speed, drifts right
+      offsetV1 = (offsetV1 - dt * flowSpeed * 0.058) % 100.0;
+      offsetU1 = (offsetU1 + dt * 0.016) % 100.0;
 
-      material.diffuseMapOffset.x = offsetU * 0.3;
-      material.diffuseMapOffset.y = offsetV;
+      // Layer 2 (Wave swells normal map): flows faster at non-harmonic rate, drifts left
+      offsetV2 = (offsetV2 - dt * flowSpeed * 0.091) % 100.0;
+      offsetU2 = (offsetU2 - dt * 0.024) % 100.0;
 
-      // Small ripples continuously slide and interlock across the surface
-      material.normalMapOffset.x = -offsetU * 0.7;
-      material.normalMapOffset.y = offsetV * 1.45;
+      material.diffuseMapOffset.x = offsetU1;
+      material.diffuseMapOffset.y = offsetV1;
+
+      // Interlocking wave interference pattern continuously breaks texture repetition
+      material.normalMapOffset.x = offsetU2;
+      material.normalMapOffset.y = offsetV2;
 
       material.update();
     };

@@ -73,9 +73,9 @@ export class LevelManager {
     this.hasTriggeredFinish = false;
 
     // 1. Water, Riverbed & Bank Materials
-    // Bad weather (rain/mist) is slightly murkier (0.60); sunny weather is crystal-clear soft blue (0.50)
+    // "Sedikit transparent": sunny weather has translucent soft blue water (0.58 opacity); rainy/misty weather is slightly murkier (0.68 opacity)
     const isBadWeather = config.environment.weather === 'rain' || config.environment.weather === 'mist';
-    const waterOpacity = isBadWeather ? 0.60 : 0.50;
+    const waterOpacity = isBadWeather ? 0.68 : 0.58;
 
     const { material: waterMat, update: waterUpdate } = WaterMaterial.create(
       this.app.graphicsDevice,
@@ -161,6 +161,8 @@ export class LevelManager {
     if (this.waterUpdateFn) {
       this.waterUpdateFn(dt, this.currentConfig.baseSpeed);
     }
+
+    this.river.update(dt, this.currentConfig.baseSpeed);
 
     if (this.finishGate) {
       this.finishGate.update(dt);

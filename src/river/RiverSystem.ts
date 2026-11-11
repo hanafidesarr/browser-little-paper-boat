@@ -99,6 +99,51 @@ export class RiverSystem {
     }
   }
 
+  private waveTimer: number = 0;
+
+  /**
+   * Updates physical 3D wave undulation along the river surface (animasi gelombang air).
+   * Generates organic sinusoidal river swells while keeping shoreline edges perfectly flush (0 dampening at banks).
+   */
+  public update(dt: number, flowSpeed: number = 10): void {
+    if (!this.riverResult) return;
+    const mesh = this.riverResult.waterMesh as any;
+    if (!mesh.__origPositions || !mesh.__currPositions) return;
+
+    this.waveTimer += dt * (1.6 + flowSpeed * 0.06);
+    const orig = mesh.__origPositions as Float32Array;
+    const curr = mesh.__currPositions as Float32Array;
+    const samples = mesh.__samples as RiverFrame[];
+    const crossSubs = mesh.__crossSubs as number;
+    const numRows = samples.length;
+    const numCols = crossSubs + 1;
+
+    let vIdx = 0;
+    for (let r = 0; r < numRows; r++) {
+      const sample = samples[r];
+      const dist = sample.distance;
+
+      // Two overlapping wave harmonics propagating along the river
+      const wavePhase1 = dist * 0.38 - this.waveTimer * 2.4;
+      const wavePhase2 = dist * 0.72 - this.waveTimer * 1.5;
+      const waveHarmonic = Math.sin(wavePhase1) * 0.045 + Math.sin(wavePhase2) * 0.022;
+
+      for (let c = 0; c < numCols; c++) {
+        const uRatio = c / crossSubs;
+        // Shoreline dampening: 0 at edges so water never clips or creates gaps at riverbanks; 1 at stream center
+        const shoreDamp = Math.sin(uRatio * Math.PI);
+        const displacement = waveHarmonic * shoreDamp;
+
+        const idx = vIdx * 3;
+        curr[idx + 1] = orig[idx + 1] + displacement;
+        vIdx++;
+      }
+    }
+
+    mesh.setPositions(curr);
+    mesh.update(pc.PRIMITIVE_TRIANGLES, false);
+  }
+
   public getRoot(): pc.Entity {
     return this.rootEntity;
   }

@@ -6,13 +6,11 @@ export class WaterMaterial {
   private static foamTexture: pc.Texture | null = null;
 
   /**
-   * Generates a crystal-clear (soft blue bening) river caustics texture with organic cellular web patterns.
+   * Generates a seamless soft-blue river caustics & wave highlight texture.
    * Color direction:
-   * - Shallow water: #B9E8F2
-   * - Normal water: #8BD3E8
-   * - Deep water: #65B9D8
-   * - Surface highlights: #E5FAFF
-   * - Wave highlights: #D5F5FA
+   * - Base soft blue: rgba(139, 211, 232, 0.82) (#8BD3E8)
+   * - Wave crest ribbons: rgba(215, 245, 252, 0.45) (#D5F5FA)
+   * - Sunlight sparkle glimmers: rgba(235, 252, 255, 0.55) (#E5FAFF)
    */
   public static getCausticTexture(device: pc.GraphicsDevice): pc.Texture {
     if (this.waterTexture) return this.waterTexture;
@@ -23,70 +21,105 @@ export class WaterMaterial {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // 1. Soft Blue Crystal-Clear Depth Gradient (translucent so riverbed is clearly visible)
-    // Reference Colors: Shallow #B9E8F2 | Normal #8BD3E8 | Deep #65B9D8
-    const bgGrad = ctx.createLinearGradient(0, 0, size, size);
-    bgGrad.addColorStop(0.0, 'rgba(101, 185, 216, 0.68)'); // #65B9D8 Deep water
-    bgGrad.addColorStop(0.5, 'rgba(139, 211, 232, 0.56)'); // #8BD3E8 Normal water
-    bgGrad.addColorStop(1.0, 'rgba(185, 232, 242, 0.44)'); // #B9E8F2 Shallow water
-    ctx.fillStyle = bgGrad;
+    // 1. Uniform Seamless Soft Blue Base (#8BD3E8)
+    // Translucent soft blue volume so water has authentic color while clearly revealing riverbed beneath
+    ctx.fillStyle = 'rgba(139, 211, 232, 0.52)';
     ctx.fillRect(0, 0, size, size);
 
-    // 2. Organic Non-Repeating Cellular Caustics (multi-scale organic curves, zero grid repetition)
+    // 2. Seamless Multi-Scale Organic Wave Caustic Curves
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Seeded pseudo-random generator for deterministic non-grid organic caustics
     let seed = 4289;
     const rnd = () => {
       seed = (seed * 9301 + 49297) % 233280;
       return seed / 233280;
     };
 
+    // Helper to draw toroidal seamless strokes across all boundaries
+    const drawSeamlessCurve = (
+      x1: number, y1: number,
+      cx: number, cy: number,
+      x2: number, y2: number
+    ) => {
+      const offsets = [
+        [0, 0], [-size, 0], [size, 0],
+        [0, -size], [0, size],
+        [-size, -size], [size, -size], [-size, size], [size, size]
+      ];
+      for (const [ox, oy] of offsets) {
+        ctx.beginPath();
+        ctx.moveTo(x1 + ox, y1 + oy);
+        ctx.quadraticCurveTo(cx + ox, cy + oy, x2 + ox, y2 + oy);
+        ctx.stroke();
+      }
+    };
+
+    // Helper to draw toroidal seamless arcs
+    const drawSeamlessArc = (
+      cx: number, cy: number,
+      r: number,
+      startAngle: number,
+      endAngle: number
+    ) => {
+      const offsets = [
+        [0, 0], [-size, 0], [size, 0],
+        [0, -size], [0, size],
+        [-size, -size], [size, -size], [-size, size], [size, size]
+      ];
+      for (const [ox, oy] of offsets) {
+        ctx.beginPath();
+        ctx.arc(cx + ox, cy + oy, r, startAngle, endAngle);
+        ctx.stroke();
+      }
+    };
+
     // Primary wave highlight bands (#D5F5FA soft translucent ribbon)
-    ctx.strokeStyle = 'rgba(215, 245, 252, 0.35)';
-    ctx.lineWidth = 4.8;
-    for (let i = 0; i < 38; i++) {
+    ctx.strokeStyle = 'rgba(215, 245, 252, 0.42)';
+    ctx.lineWidth = 5.0;
+    for (let i = 0; i < 36; i++) {
       const x1 = rnd() * size;
       const y1 = rnd() * size;
-      const x2 = (x1 + (rnd() - 0.5) * 140 + size) % size;
-      const y2 = (y1 + (rnd() - 0.5) * 140 + size) % size;
-      const cx = (x1 + x2) * 0.5 + (rnd() - 0.5) * 50;
-      const cy = (y1 + y2) * 0.5 + (rnd() - 0.5) * 50;
+      const x2 = x1 + (rnd() - 0.5) * 120;
+      const y2 = y1 + (rnd() - 0.5) * 120;
+      const cx = (x1 + x2) * 0.5 + (rnd() - 0.5) * 45;
+      const cy = (y1 + y2) * 0.5 + (rnd() - 0.5) * 45;
 
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo(cx, cy, x2, y2);
-      ctx.stroke();
+      drawSeamlessCurve(x1, y1, cx, cy, x2, y2);
     }
 
     // Secondary delicate surface highlight threads (#E5FAFF)
-    ctx.strokeStyle = 'rgba(235, 252, 255, 0.25)';
-    ctx.lineWidth = 2.4;
-    for (let j = 0; j < 52; j++) {
+    ctx.strokeStyle = 'rgba(235, 252, 255, 0.32)';
+    ctx.lineWidth = 2.6;
+    for (let j = 0; j < 48; j++) {
       const cx = rnd() * size;
       const cy = rnd() * size;
-      const r = 14 + rnd() * 32;
+      const r = 16 + rnd() * 28;
       const startAngle = rnd() * Math.PI * 2;
       const endAngle = startAngle + Math.PI * (0.8 + rnd() * 0.8);
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, startAngle, endAngle);
-      ctx.stroke();
+      drawSeamlessArc(cx, cy, r, startAngle, endAngle);
     }
 
     // 3. Delicate Sunlight Sparkling Glimmers (subtle sparkling highlights when sunlight hits water)
-    for (let k = 0; k < 42; k++) {
+    for (let k = 0; k < 36; k++) {
       const gx = rnd() * size;
       const gy = rnd() * size;
-      const gr = 1.2 + rnd() * 1.8;
+      const gr = 1.4 + rnd() * 1.8;
       const sparkleGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr * 2.5);
-      sparkleGrad.addColorStop(0.0, 'rgba(229, 250, 255, 0.35)'); // #E5FAFF
-      sparkleGrad.addColorStop(1.0, 'rgba(229, 250, 255, 0.0)');
+      sparkleGrad.addColorStop(0.0, 'rgba(235, 252, 255, 0.45)'); // #E5FAFF
+      sparkleGrad.addColorStop(1.0, 'rgba(235, 252, 255, 0.0)');
       ctx.fillStyle = sparkleGrad;
-      ctx.beginPath();
-      ctx.arc(gx, gy, gr * 2.5, 0, Math.PI * 2);
-      ctx.fill();
+
+      const offsets = [
+        [0, 0], [-size, 0], [size, 0],
+        [0, -size], [0, size]
+      ];
+      for (const [ox, oy] of offsets) {
+        ctx.beginPath();
+        ctx.arc(gx + ox, gy + oy, gr * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     const texture = new pc.Texture(device, {
@@ -127,23 +160,24 @@ export class WaterMaterial {
         const v = (y / size) * Math.PI * 2;
 
         // Wave Harmonics for authentic rolling waves (gelombang ombak):
-        // 1. Primary rolling river wave swells (peaked crests along current)
-        const wavePhase1 = v * 3.5 + u * 1.5;
-        const dX1 = (Math.sin(wavePhase1) - 0.28 * Math.cos(wavePhase1 * 2.0)) * 0.48;
-        const dY1 = (Math.cos(wavePhase1) + 0.28 * Math.sin(wavePhase1 * 2.0)) * 0.58;
+        // Broad, natural wavelengths for a peaceful, flowing river feel
+        // 1. Primary gentle rolling river wave swells (along current)
+        const wavePhase1 = v * 1.0 + u * 1.0;
+        const dX1 = (Math.sin(wavePhase1) - 0.20 * Math.cos(wavePhase1 * 2.0)) * 0.45;
+        const dY1 = (Math.cos(wavePhase1) + 0.20 * Math.sin(wavePhase1 * 2.0)) * 0.55;
 
-        // 2. Secondary diagonal crossing wave swells (gelombang silang)
-        const wavePhase2 = u * 4.8 - v * 3.2 + 1.2;
-        const dX2 = Math.sin(wavePhase2) * 0.32;
-        const dY2 = Math.cos(wavePhase2) * 0.28;
+        // 2. Secondary diagonal crossing gentle swells
+        const wavePhase2 = u * 2.0 - v * 1.0;
+        const dX2 = Math.sin(wavePhase2) * 0.28;
+        const dY2 = Math.cos(wavePhase2) * 0.25;
 
-        // 3. Surface chop / medium waves
-        const dX3 = Math.cos(u * 9.6 + v * 8.2) * 0.20;
-        const dY3 = Math.sin(u * 8.4 - v * 10.6) * 0.20;
+        // 3. Subtle undulating water ripples
+        const dX3 = Math.cos(u * 2.0 + v * 2.0) * 0.16;
+        const dY3 = Math.sin(u * 3.0 - v * 2.0) * 0.16;
 
-        // 4. Fine capillary micro-ripples
-        const dX4 = Math.sin(u * 18.0 - v * 16.0) * 0.12;
-        const dY4 = Math.cos(u * 16.0 + v * 18.0) * 0.12;
+        // 4. Fine gentle micro-highlights
+        const dX4 = Math.sin(u * 4.0 - v * 4.0) * 0.10;
+        const dY4 = Math.cos(u * 4.0 + v * 4.0) * 0.10;
 
         const nx = dX1 + dX2 + dX3 + dX4;
         const ny = dY1 + dY2 + dY3 + dY4;
@@ -225,38 +259,38 @@ export class WaterMaterial {
   }
 
   /**
-   * Creates crystal-clear (Soft Blue bening) water material with authentic rolling waves (gelombang ombak)
-   * and non-repeating dual-speed incommensurate UV animation (optimized for 60 FPS mobile).
+   * Creates soft-blue water material with visible wave animation (animasi gelombang air)
+   * and balanced translucency (air sedikit transparent).
    * Reference Colors:
    * Shallow: #B9E8F2 | Normal: #8BD3E8 | Deep: #65B9D8 | Highlights: #E5FAFF & #D5F5FA
    */
   public static create(
     device: pc.GraphicsDevice,
     tint: pc.Color = new pc.Color(0.545, 0.827, 0.910), // #8BD3E8 Soft Blue
-    opacity: number = 0.38 // Soft Blue Crystal-Clear water transparency
+    opacity: number = 0.58 // Sedikit transparent (semi-translucent with visible riverbed beneath)
   ): { material: pc.StandardMaterial; update: (dt: number, speed: number) => void } {
     const material = new pc.StandardMaterial();
     const diffuseTex = this.getCausticTexture(device);
     const normalTex = this.getRippleNormalTexture(device);
 
     material.diffuse = tint;
-    material.ambient = new pc.Color(0.48, 0.76, 0.88); // Soft blue ambient light (preserves clear blue tone without blowing out to white)
+    material.ambient = new pc.Color(0.48, 0.76, 0.88); // Soft blue ambient light
     material.emissive = new pc.Color(0.06, 0.18, 0.26); // Subtle aquatic radiance
 
-    // Primary diffuse caustic map (incommensurate irrational tiling)
+    // Primary diffuse caustic map (natural scale across river width)
     material.diffuseMap = diffuseTex;
-    material.diffuseMapTiling = new pc.Vec2(1.73, 4.19);
+    material.diffuseMapTiling = new pc.Vec2(1.0, 2.0);
     material.diffuseMapOffset = new pc.Vec2(0, 0);
 
-    // Multi-octave rolling wave swells normal map (non-harmonic irrational tiling)
+    // Multi-octave rolling wave swells normal map (gentle river swells)
     material.normalMap = normalTex;
-    material.normalMapTiling = new pc.Vec2(3.37, 8.63);
+    material.normalMapTiling = new pc.Vec2(1.0, 2.0);
     material.normalMapOffset = new pc.Vec2(0, 0);
-    material.bumpiness = 0.38; // Soft natural wave crests without harsh glare
+    material.bumpiness = 0.46; // Gentle natural wave crests without harsh corduroy ridges
 
-    // Gentle sunlight highlights (#FFE5A3 & #E5FAFF tone response)
-    material.specular = new pc.Color(0.14, 0.18, 0.22);
-    material.shininess = 28;
+    // Soft daylight reflections across moving wave crests
+    material.specular = new pc.Color(0.70, 0.82, 0.92);
+    material.shininess = 38;
     material.opacity = opacity;
     material.blendType = pc.BLEND_NORMAL;
     material.cull = pc.CULLFACE_NONE;
@@ -268,18 +302,18 @@ export class WaterMaterial {
     let offsetU2 = 0;
 
     const update = (dt: number, flowSpeed: number) => {
-      // Layer 1 (Caustic map): flows along river at base speed, drifts right
-      offsetV1 = (offsetV1 - dt * flowSpeed * 0.058) % 100.0;
-      offsetU1 = (offsetU1 + dt * 0.016) % 100.0;
+      // Layer 1 (Caustic map): flows along river at base speed, drifts gently
+      offsetV1 = (offsetV1 - dt * flowSpeed * 0.08) % 10.0;
+      offsetU1 = (offsetU1 + dt * 0.02) % 10.0;
 
-      // Layer 2 (Wave swells normal map): flows faster at non-harmonic rate, drifts left
-      offsetV2 = (offsetV2 - dt * flowSpeed * 0.091) % 100.0;
-      offsetU2 = (offsetU2 - dt * 0.024) % 100.0;
+      // Layer 2 (Wave swells normal map): flows dynamically along river with wave propagation
+      offsetV2 = (offsetV2 - dt * flowSpeed * 0.14) % 10.0;
+      offsetU2 = (offsetU2 - dt * 0.035) % 10.0;
 
       material.diffuseMapOffset.x = offsetU1;
       material.diffuseMapOffset.y = offsetV1;
 
-      // Interlocking wave interference pattern continuously breaks texture repetition
+      // Interlocking wave interference pattern continuously animates rolling wave crests
       material.normalMapOffset.x = offsetU2;
       material.normalMapOffset.y = offsetV2;
 

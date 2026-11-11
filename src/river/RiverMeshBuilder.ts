@@ -33,7 +33,7 @@ export class RiverMeshBuilder {
     options: RiverMeshOptions = {}
   ): RiverMeshResult {
     const stepSize = options.stepSize ?? 1.5;
-    const crossSubs = Math.max(2, options.crossSubdivisions ?? 4);
+    const crossSubs = Math.max(2, options.crossSubdivisions ?? 8);
     const bankWidth = options.bankWidth ?? 15.0;
     const bankHeight = options.bankHeight ?? 3.0;
     const bedDepth = options.bedDepth ?? 1.15;
@@ -113,9 +113,7 @@ export class RiverMeshBuilder {
         const lateralOffset = (uRatio - 0.5) * sample.width;
 
         const px = sample.position.x + sample.normal.x * lateralOffset;
-        // Subtle natural cup in river center
-        const cup = Math.sin(uRatio * Math.PI) * -0.04;
-        const py = sample.position.y + cup;
+        const py = sample.position.y;
         const pz = sample.position.z + sample.normal.z * lateralOffset;
 
         positions[vIdx * 3 + 0] = px;
@@ -164,6 +162,12 @@ export class RiverMeshBuilder {
     mesh.setIndices(indices);
     mesh.update(pc.PRIMITIVE_TRIANGLES);
 
+    // Dynamic wave animation metadata
+    (mesh as any).__origPositions = Float32Array.from(positions);
+    (mesh as any).__currPositions = Float32Array.from(positions);
+    (mesh as any).__samples = samples;
+    (mesh as any).__crossSubs = crossSubs;
+
     return mesh;
   }
 
@@ -207,7 +211,7 @@ export class RiverMeshBuilder {
         normals[vIdx * 3 + 1] = 0.94;
         normals[vIdx * 3 + 2] = -sample.normal.z * slope;
 
-        uvs[uvIdx * 2 + 0] = uRatio * 2.0;
+        uvs[uvIdx * 2 + 0] = uRatio;
         uvs[uvIdx * 2 + 1] = sample.distance / 8.0;
 
         vIdx++;
@@ -257,12 +261,8 @@ export class RiverMeshBuilder {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // Golden sand & clean riverbed gravel base
-    const grad = ctx.createLinearGradient(0, 0, size, size);
-    grad.addColorStop(0.0, '#c4b694'); // Clean golden river sand
-    grad.addColorStop(0.5, '#d8caa8'); // Shimmering pebble bed
-    grad.addColorStop(1.0, '#b8a682'); // Mid-channel sand
-    ctx.fillStyle = grad;
+    // Seamless golden sand & clean riverbed gravel base
+    ctx.fillStyle = '#cfc29f'; // Uniform warm riverbed sand (zero seam wrapping)
     ctx.fillRect(0, 0, size, size);
 
     // Smooth rounded underwater stones & quartz river pebbles
@@ -439,8 +439,8 @@ export class RiverMeshBuilder {
     const mat = new pc.StandardMaterial();
     mat.diffuse = new pc.Color(0.20, 0.68, 0.76);
     mat.ambient = new pc.Color(0.18, 0.48, 0.58);
-    mat.shininess = 24;
-    mat.opacity = 0.38; // Crystal-clear bening water
+    mat.shininess = 32;
+    mat.opacity = 0.65; // Sedikit transparent soft blue water
     mat.blendType = pc.BLEND_NORMAL;
     mat.cull = pc.CULLFACE_NONE;
     mat.update();

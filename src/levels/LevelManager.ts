@@ -7,6 +7,7 @@ import { ObstacleManager } from '../obstacles/ObstacleManager';
 import { CollectibleManager } from '../collectibles/CollectibleManager';
 import { CheckpointManager } from '../checkpoints/CheckpointManager';
 import { EffectManager } from '../particles/EffectManager';
+import { AudioManager } from '../audio/AudioManager';
 import { FinishGate } from '../environment/FinishGate';
 import { WaterMaterial } from '../water/WaterMaterial';
 import { LEVEL_DATA } from './LevelData';
@@ -22,6 +23,7 @@ export class LevelManager {
   private collectibles: CollectibleManager;
   private checkpoints: CheckpointManager;
   private effects: EffectManager;
+  private audio: AudioManager;
 
   private currentLevelId: number = 1;
   private currentConfig: LevelConfig = LEVEL_DATA[1];
@@ -45,6 +47,7 @@ export class LevelManager {
     collectibles: CollectibleManager,
     checkpoints: CheckpointManager,
     effects: EffectManager,
+    audio: AudioManager,
     sunLight: pc.Entity,
     cameraEntity: pc.Entity
   ) {
@@ -57,6 +60,7 @@ export class LevelManager {
     this.collectibles = collectibles;
     this.checkpoints = checkpoints;
     this.effects = effects;
+    this.audio = audio;
     this.sunLight = sunLight;
     this.cameraEntity = cameraEntity;
   }
@@ -108,6 +112,7 @@ export class LevelManager {
     });
 
     this.weather.setWeather(config.environment.weather, this.boat.getPosition());
+    this.audio.setTheme(config.audioTheme || 'morning');
 
     // 5. Lighting & Atmosphere
     if (this.sunLight.light) {

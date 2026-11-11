@@ -14,6 +14,7 @@ export interface LevelConfig {
   collectibles: CollectibleSpawn[];
   bridgeDistances?: number[];
   baseSpeed: number;
+  audioTheme?: 'morning' | 'garden' | 'forest' | 'rain' | 'autumn' | 'twilight' | 'rapids';
   environment: {
     seed: number;
     treeDensity: number;

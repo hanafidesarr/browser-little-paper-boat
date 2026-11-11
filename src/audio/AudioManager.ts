@@ -12,6 +12,13 @@ export class AudioManager {
   private musicInterval: any = null;
   private birdInterval: any = null;
   private riverNoiseNode: AudioNode | null = null;
+  private riverFilterNode: BiquadFilterNode | null = null;
+  private currentChords: number[][] = [
+    [261.63, 329.63, 392.00, 493.88], // C E G B
+    [220.00, 261.63, 329.63, 392.00], // A C E G
+    [174.61, 261.63, 329.63, 349.23], // F C E F
+    [196.00, 261.63, 293.66, 392.00]  // G C D G
+  ];
 
   constructor() {
     // Initialized on first user interaction
@@ -97,6 +104,7 @@ export class AudioManager {
     filter.connect(this.ambientGain);
     whiteNoise.start();
     this.riverNoiseNode = whiteNoise;
+    this.riverFilterNode = filter;
   }
 
   // ==========================================
@@ -140,22 +148,15 @@ export class AudioManager {
   private startMusic(): void {
     if (!this.ctx || !this.musicGain) return;
 
-    // Peaceful Pentatonic Chord Progression in C Major (Cmaj7 -> Am9 -> Fmaj7 -> Gsus4)
-    const chords = [
-      [261.63, 329.63, 392.00, 493.88], // C E G B
-      [220.00, 261.63, 329.63, 392.00], // A C E G
-      [174.61, 261.63, 329.63, 349.23], // F C E F
-      [196.00, 261.63, 293.66, 392.00]  // G C D G
-    ];
-
     let chordIdx = 0;
     let noteIdx = 0;
 
     this.musicInterval = setInterval(() => {
       if (!this.ctx || this.ctx.state !== 'running' || !this.musicGain) return;
 
-      const chord = chords[chordIdx];
-      const freq = chord[noteIdx];
+      const chords = this.currentChords;
+      const chord = chords[chordIdx % chords.length];
+      const freq = chord[noteIdx % chord.length];
       this.playMusicNote(freq);
 
       noteIdx++;
@@ -164,6 +165,61 @@ export class AudioManager {
         chordIdx = (chordIdx + 1) % chords.length;
       }
     }, 750);
+  }
+
+  public setTheme(theme: string): void {
+    if (theme === 'rain') {
+      // D minor / F major peaceful rain
+      this.currentChords = [
+        [220.00, 261.63, 293.66, 349.23], // Dm7
+        [174.61, 220.00, 261.63, 329.63], // Fmaj7
+        [196.00, 246.94, 293.66, 349.23]  // G7
+      ];
+      if (this.ctx && this.riverFilterNode) {
+        this.riverFilterNode.frequency.setTargetAtTime(320, this.ctx.currentTime, 0.5);
+      }
+    } else if (theme === 'autumn') {
+      // Warm golden G major / Em9
+      this.currentChords = [
+        [196.00, 246.94, 293.66, 392.00], // G
+        [164.81, 196.00, 246.94, 293.66], // Em7
+        [220.00, 261.63, 329.63, 392.00]  // Am7
+      ];
+      if (this.ctx && this.riverFilterNode) {
+        this.riverFilterNode.frequency.setTargetAtTime(450, this.ctx.currentTime, 0.5);
+      }
+    } else if (theme === 'twilight') {
+      // Mystical Am / Fmaj7 dreamy
+      this.currentChords = [
+        [220.00, 261.63, 329.63, 440.00], // Am
+        [174.61, 220.00, 261.63, 349.23], // Fmaj7
+        [164.81, 196.00, 246.94, 329.63]  // Em
+      ];
+      if (this.ctx && this.riverFilterNode) {
+        this.riverFilterNode.frequency.setTargetAtTime(360, this.ctx.currentTime, 0.5);
+      }
+    } else if (theme === 'rapids') {
+      // Dynamic E minor / G brisk stream
+      this.currentChords = [
+        [164.81, 196.00, 246.94, 329.63], // Em
+        [196.00, 246.94, 293.66, 392.00], // G
+        [220.00, 261.63, 329.63, 440.00]  // Am
+      ];
+      if (this.ctx && this.riverFilterNode) {
+        this.riverFilterNode.frequency.setTargetAtTime(560, this.ctx.currentTime, 0.5);
+      }
+    } else {
+      // Morning / default C major
+      this.currentChords = [
+        [261.63, 329.63, 392.00, 493.88], // C E G B
+        [220.00, 261.63, 329.63, 392.00], // A C E G
+        [174.61, 261.63, 329.63, 349.23], // F C E F
+        [196.00, 261.63, 293.66, 392.00]  // G C D G
+      ];
+      if (this.ctx && this.riverFilterNode) {
+        this.riverFilterNode.frequency.setTargetAtTime(420, this.ctx.currentTime, 0.5);
+      }
+    }
   }
 
   private playMusicNote(freq: number): void {

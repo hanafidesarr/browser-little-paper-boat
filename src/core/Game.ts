@@ -92,6 +92,7 @@ export class Game {
       this.collectibles,
       this.checkpoints,
       this.effects,
+      this.audio,
       this.sunLight,
       this.camera.getEntity()
     );
@@ -164,7 +165,7 @@ export class Game {
     };
   }
 
-  private startLevel(levelId: number): void {
+  public startLevel(levelId: number): void {
     this.state = 'PLAYING';
     this.levelManager.loadLevel(levelId);
     this.camera.reset();
@@ -176,6 +177,10 @@ export class Game {
       cfg.collectibles.length
     );
     this.ui.updateIntegrity(this.boat.maxIntegrity, this.boat.maxIntegrity);
+  }
+
+  public getUIManager(): UIManager {
+    return this.ui;
   }
 
   private startLoop(): void {

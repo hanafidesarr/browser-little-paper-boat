@@ -32,7 +32,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // URL parameter routing for testing & visual verification
-  if (window.location.search.includes('modal=about')) {
+  if (window.location.search.includes('modal=settings')) {
+    setTimeout(() => {
+      document.getElementById('btn-settings')?.click();
+    }, 250);
+  } else if (window.location.search.includes('modal=about')) {
     setTimeout(() => {
       document.getElementById('btn-about')?.click();
     }, 250);

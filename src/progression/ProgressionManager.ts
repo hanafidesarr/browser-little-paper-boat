@@ -7,6 +7,7 @@ export interface LevelRecord {
 
 export interface PlayerData {
   levels: { [levelId: number]: LevelRecord };
+  masterVolume: number;
   musicVolume: number;
   ambientVolume: number;
   sfxVolume: number;
@@ -29,6 +30,10 @@ export class ProgressionManager {
       this.resetDefaults();
     }
 
+    if (this.data.masterVolume === undefined) {
+      this.data.masterVolume = 0.8;
+    }
+
     // Ensure Level 1 is always unlocked
     if (!this.data.levels[1]) {
       this.data.levels[1] = { unlocked: true, completed: false, stars: 0, bestCollectibles: 0 };
@@ -41,8 +46,9 @@ export class ProgressionManager {
       levels: {
         1: { unlocked: true, completed: false, stars: 0, bestCollectibles: 0 }
       },
-      musicVolume: 0.6,
-      ambientVolume: 0.7,
+      masterVolume: 0.85,
+      musicVolume: 0.65,
+      ambientVolume: 0.75,
       sfxVolume: 0.8,
       tutorialSeen: false
     };
@@ -114,19 +120,27 @@ export class ProgressionManager {
     return { stars, isNewUnlock };
   }
 
-  public static getVolumes(): { music: number; ambient: number; sfx: number } {
+  public static getVolumes(): { master: number; music: number; ambient: number; sfx: number } {
     return {
+      master: this.data.masterVolume !== undefined ? this.data.masterVolume : 0.8,
       music: this.data.musicVolume,
       ambient: this.data.ambientVolume,
       sfx: this.data.sfxVolume
     };
   }
 
-  public static setVolumes(music: number, ambient: number, sfx: number): void {
+  public static setVolumes(music: number, ambient: number, sfx: number, master?: number): void {
+    if (master !== undefined) {
+      this.data.masterVolume = master;
+    }
     this.data.musicVolume = music;
     this.data.ambientVolume = ambient;
     this.data.sfxVolume = sfx;
     this.save();
+  }
+
+  public static resetAllProgress(): void {
+    this.resetDefaults();
   }
 
   private static save(): void {

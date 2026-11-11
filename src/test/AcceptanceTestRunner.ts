@@ -179,6 +179,46 @@ export class AcceptanceTestRunner {
     const modalLayers = document.querySelectorAll('.modal-layer');
     assert(modalLayers.length === 1, '12. Exactly ONE centralized modal-layer exists in the DOM (no multiple stacked overlays)');
 
+    // ----------------------------------------------------
+    // Scenario 13: Phase 6 Illustrated Ten-Level Selection Map
+    // ----------------------------------------------------
+    ui.showLevelSelection(false);
+    await new Promise(r => setTimeout(r, 50));
+    for (let id = 1; id <= 10; id++) {
+      const node = document.getElementById(`realm-node-${id}`);
+      assert(node !== null, `13. Realm card 0${id} exists on illustrated map`);
+    }
+    const realm1 = document.getElementById('realm-node-1');
+    const realm2 = document.getElementById('realm-node-2');
+    const realm10 = document.getElementById('realm-node-10');
+    assert(realm1?.classList.contains('completed') || realm1?.classList.contains('unlocked'), '13. Realm 01 is unlocked/completed');
+    assert(realm2?.classList.contains('unlocked') || realm2?.classList.contains('completed'), '13. Realm 02 is unlocked sequentially');
+    assert(realm10?.classList.contains('locked'), '13. Realm 10 is locked until predecessors are completed');
+    assert(document.getElementById('btn-map-left') !== null, '13. Map pan left button exists');
+    assert(document.getElementById('btn-map-right') !== null, '13. Map pan right button exists');
+
+    // ----------------------------------------------------
+    // Scenario 14: Phase 6 Audio Controls & Mute
+    // ----------------------------------------------------
+    ui.openModal('SETTINGS');
+    await new Promise(r => setTimeout(r, 50));
+    assert(document.getElementById('slider-master') !== null, '14. Master volume slider exists');
+    assert(document.getElementById('slider-music') !== null, '14. Music volume slider exists');
+    assert(document.getElementById('slider-ambient') !== null, '14. Ambient volume slider exists');
+    assert(document.getElementById('slider-sfx') !== null, '14. SFX volume slider exists');
+    const muteBtn = document.getElementById('btn-toggle-mute');
+    assert(muteBtn !== null, '14. Sound Mute toggle button exists');
+    muteBtn?.click();
+    assert(muteBtn?.textContent?.includes('Unmute') || muteBtn?.textContent?.includes('Muted'), '14. Mute toggle toggles state');
+    muteBtn?.click();
+    ui.closeModal();
+
+    // ----------------------------------------------------
+    // Scenario 15: Responsive & Safe Areas
+    // ----------------------------------------------------
+    assert(document.getElementById('portrait-advisory') !== null, '15. Portrait orientation advisory exists');
+    assert(document.getElementById('hud-boat-marker') !== null, '15. HUD journey progress paper boat indicator exists');
+
     const passedCount = results.filter(r => r.passed).length;
     console.log('====================================================');
     console.log(`ACCEPTANCE TEST RESULTS: ${passedCount}/${results.length} PASSED`);

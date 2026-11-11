@@ -20,6 +20,19 @@ export type ModalType =
   | 'LEVEL_COMPLETE'
   | 'GAME_OVER';
 
+const REALM_ICONS: { [id: number]: string } = {
+  1: '🌿',
+  2: '🌲',
+  3: '🪨',
+  4: '🌉',
+  5: '🍂',
+  6: '🌧️',
+  7: '🌸',
+  8: '🌄',
+  9: '🪵',
+  10: '🌊'
+};
+
 export class UIManager {
   private container: HTMLElement;
   private audio: AudioManager;
@@ -47,6 +60,7 @@ export class UIManager {
   private hudLevelSubtitle!: HTMLElement;
   private hudCollectibleBadge!: HTMLElement;
   private hudProgressBar!: HTMLElement;
+  private hudBoatMarker!: HTMLElement;
   private hudIntegrityEl!: HTMLElement;
   private hudCheckpointBannerEl!: HTMLElement;
   private bannerTimeout: any = null;
@@ -54,6 +68,12 @@ export class UIManager {
   // Result elements
   private resultStarsEl!: HTMLElement;
   private resultScoreEl!: HTMLElement;
+
+  // Map elements
+  private mapScrollViewport!: HTMLElement;
+  private mapTotalStarsEl!: HTMLElement;
+  private mapTotalCollectiblesEl!: HTMLElement;
+  private portraitAdvisoryEl!: HTMLElement;
 
   // Callbacks
   public onPlayClicked: ((levelId: number) => void) | null = null;
@@ -71,32 +91,53 @@ export class UIManager {
     this.audio = audio;
     this.container = document.getElementById('ui-container') as HTMLElement;
     this.buildScreens();
+    this.setupOrientationAdvisory();
   }
 
   private buildScreens(): void {
     this.container.innerHTML = `
       <!-- MAIN MENU SCREEN -->
       <div id="screen-main-menu" class="ui-screen">
-        <div class="paper-card">
+        <div class="paper-card" style="max-width: 440px;">
           <h1 class="game-title">⛵ Little Paper Boat</h1>
           <p class="game-tagline">"A little boat. A wonderful journey."</p>
           <div class="btn-stack">
             <button id="btn-play" class="cozy-btn">Start Journey</button>
-            <button id="btn-levels" class="cozy-btn secondary">Level Selection</button>
-            <button id="btn-how" class="cozy-btn secondary">How to Sail</button>
-            <button id="btn-settings" class="cozy-btn secondary">Audio Settings</button>
-            <button id="btn-about" class="cozy-btn secondary">About</button>
+            <button id="btn-levels" class="cozy-btn secondary">River Map 🗺️</button>
+            <button id="btn-how" class="cozy-btn secondary">How to Sail ⛵</button>
+            <button id="btn-settings" class="cozy-btn secondary">Audio Settings 🎵</button>
+            <button id="btn-about" class="cozy-btn secondary">About 📖</button>
           </div>
+          <p style="margin-top: 18px; font-size: 0.75rem; color: #769380; font-family: 'Yomogi', cursive;">
+            A cozy 3D browser adventure • Powered by PlayCanvas
+          </p>
         </div>
       </div>
 
-      <!-- LEVEL SELECT SCREEN -->
+      <!-- ILLUSTRATED TEN-LEVEL RIVER MAP SCREEN -->
       <div id="screen-level-select" class="ui-screen hidden">
-        <div class="paper-card" style="max-width: 680px; width: 92%;">
-          <h2 style="font-size: 1.8rem; color: #2b583f; margin-bottom: 4px;">River Journeys</h2>
-          <p style="color: #6c8c72; margin-bottom: 12px;">Choose a peaceful river to navigate</p>
-          <div id="level-grid-container" class="level-grid"></div>
-          <button id="btn-back-menu" class="cozy-btn secondary" style="margin-top: 10px;">Back to Menu</button>
+        <div class="map-page-layout">
+          <!-- MAP HEADER -->
+          <div class="map-header">
+            <button id="btn-back-menu" class="cozy-btn secondary" style="padding: 8px 18px; font-size: 0.9rem;">
+              ◀ Menu
+            </button>
+            <div class="map-title-block">
+              <h2 class="map-title">River Journeys 🗺️</h2>
+              <span class="map-subtitle">Follow the gentle currents through 10 tranquil realms</span>
+            </div>
+            <div class="map-stats-pill">
+              <span>⭐ <strong id="map-total-stars">0</strong>/30</span>
+              <span>🌸 <strong id="map-total-collectibles">0</strong>/100</span>
+            </div>
+          </div>
+
+          <!-- MAP SCROLL VIEWPORT -->
+          <div id="map-scroll-viewport" class="map-scroll-viewport">
+            <button id="btn-map-left" class="map-nav-arrow left" title="Scroll Left">◀</button>
+            <button id="btn-map-right" class="map-nav-arrow right" title="Scroll Right">▶</button>
+            <div id="level-grid-container" class="map-river-track"></div>
+          </div>
         </div>
       </div>
 
@@ -108,30 +149,47 @@ export class UIManager {
             <div id="hud-subtitle" class="hud-level-subtitle">A gentle dawn awakening</div>
           </div>
           <div class="hud-badges">
-            <div id="hud-integrity" class="hud-integrity">⛵ ⛵ ⛵</div>
+            <div id="hud-integrity" class="hud-integrity" title="Paper Boat Condition">⛵ ⛵ ⛵</div>
             <div id="hud-collectible" class="hud-badge">🌸 0 / 10</div>
-            <button id="btn-pause" class="hud-pause-btn" title="Pause">⏸</button>
+            <button id="btn-pause" class="hud-pause-btn" title="Pause [Esc]">⏸</button>
           </div>
         </div>
         <div id="hud-checkpoint-banner" class="hud-checkpoint-banner">🏮 Lantern Checkpoint Reached</div>
         <div class="hud-bottom">
           <div class="progress-container">
             <div id="hud-progress-bar" class="progress-bar"></div>
+            <div id="hud-boat-marker" class="progress-boat-icon">⛵</div>
           </div>
-          <div class="touch-hint">Drag screen or use A / D / Arrow Keys to steer</div>
+          <div id="hud-touch-hint" class="touch-hint">Drag screen or use A / D / Arrow Keys to steer</div>
         </div>
       </div>
 
       <!-- SINGLE CENTRALIZED MODAL LAYER -->
       <div id="modal-layer" class="modal-layer hidden">
         <!-- 1. TUTORIAL / HOW TO SAIL CARD -->
-        <div id="modal-card-tutorial" class="paper-card modal-card hidden" style="max-width: 460px; text-align: left;">
-          <h2 style="color: #2b583f; margin-bottom: 12px; text-align: center;">How to Sail</h2>
-          <p style="margin-bottom: 10px; line-height: 1.5;">⛵ <strong>Gentle Navigation:</strong> Your paper boat drifts forward automatically with the river flow.</p>
-          <p style="margin-bottom: 10px; line-height: 1.5;">⌨️ <strong>Desktop Controls:</strong> Press <code>A</code> / <code>D</code> or <code>Left</code> / <code>Right</code> arrow keys, or click & drag with your mouse to steer across the river.</p>
-          <p style="margin-bottom: 10px; line-height: 1.5;">📱 <strong>Mobile Controls:</strong> Touch and drag anywhere on the screen horizontally, or use the touch joystick.</p>
-          <p style="margin-bottom: 10px; line-height: 1.5;">🌸 <strong>Collectibles:</strong> Gather floating golden leaves, blossoms, and star motes to earn 3-star ratings!</p>
-          <p style="margin-bottom: 16px; line-height: 1.5;">🍃 <strong>Peaceful Spirit:</strong> Rocks and logs produce soft bumps, not game overs. Enjoy the scenery!</p>
+        <div id="modal-card-tutorial" class="paper-card modal-card hidden" style="max-width: 500px; text-align: left;">
+          <h2 style="color: #2b583f; margin-bottom: 14px; text-align: center; font-size: 1.6rem;">How to Sail ⛵</h2>
+          <div style="background: rgba(238, 247, 241, 0.7); border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;">
+            <p style="margin-bottom: 8px; font-weight: 700; color: #2e6040;">⌨️ Desktop Keyboard:</p>
+            <p style="font-size: 0.9rem; line-height: 1.5; color: #3b5b48;">
+              • Steer: <code>A</code> / <code>D</code> or <code>←</code> / <code>→</code><br>
+              • Speed: <code>W</code> / <code>↑</code> Surge forward • <code>S</code> / <code>↓</code> Gentle brake<br>
+              • Pause: <code>P</code> or <code>Escape</code>
+            </p>
+          </div>
+          <div style="background: rgba(238, 247, 241, 0.7); border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;">
+            <p style="margin-bottom: 8px; font-weight: 700; color: #2e6040;">🖱️ Mouse & 📱 Touch:</p>
+            <p style="font-size: 0.9rem; line-height: 1.5; color: #3b5b48;">
+              • Drag horizontally across the water to guide the rudder.<br>
+              • On mobile, use the floating thumb joystick on the left.
+            </p>
+          </div>
+          <div style="background: rgba(254, 243, 199, 0.5); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;">
+            <p style="margin-bottom: 6px; font-weight: 700; color: #92400e;">🌸 Goal of the River:</p>
+            <p style="font-size: 0.88rem; line-height: 1.5; color: #78350f;">
+              Collect blossoms and golden leaves to earn 3 stars. Pass lantern checkpoints and glide through the finish arch!
+            </p>
+          </div>
           <div style="text-align: center;">
             <button id="btn-tutorial-understood" class="cozy-btn">Understood</button>
           </div>
@@ -139,67 +197,112 @@ export class UIManager {
 
         <!-- 2. ABOUT CARD -->
         <div id="modal-card-about" class="paper-card modal-card hidden" style="max-width: 420px;">
-          <h2 style="color: #2b583f; margin-bottom: 8px;">Little Paper Boat</h2>
-          <p style="font-family: 'Yomogi', cursive; font-size: 1.2rem; color: #5f7470; margin-bottom: 16px;">"A little boat. A wonderful journey."</p>
-          <p style="font-size: 1.0rem; font-weight: 700; color: #2b583f; margin-bottom: 8px;">Engine: PlayCanvas 3D</p>
+          <h2 style="color: #2b583f; margin-bottom: 6px;">Little Paper Boat</h2>
+          <p style="font-family: 'Yomogi', cursive; font-size: 1.25rem; color: #5f7470; margin-bottom: 16px;">"A little boat. A wonderful journey."</p>
+          <div style="background: #eef7f1; border-radius: 12px; padding: 10px 16px; margin-bottom: 16px;">
+            <p style="font-size: 1.05rem; font-weight: 700; color: #2b583f;">Engine: PlayCanvas 3D</p>
+            <p style="font-size: 0.85rem; color: #577360;">WebGL Procedural Spline Adventure</p>
+          </div>
           <p style="font-size: 0.95rem; line-height: 1.6; color: #42584e; margin-bottom: 22px;">
-            A cozy adventure about peaceful exploration.
+            A cozy adventure about peaceful exploration. Follow winding rivers, listen to tranquil bird calls, gather riverside treasures, and discover serene fantasy worlds.
           </p>
           <button id="btn-close-about" class="cozy-btn">Close</button>
         </div>
 
-        <!-- 3. SETTINGS CARD -->
-        <div id="modal-card-settings" class="paper-card modal-card hidden" style="width: 360px;">
-          <h2 style="color: #2b583f; margin-bottom: 16px;">Audio Settings</h2>
+        <!-- 3. AUDIO SETTINGS CARD -->
+        <div id="modal-card-settings" class="paper-card modal-card hidden" style="width: 400px; max-width: 92%;">
+          <h2 style="color: #2b583f; margin-bottom: 16px;">Audio Settings 🎵</h2>
+          
           <div class="slider-group">
-            <span>Music:</span>
-            <input type="range" id="slider-music" min="0" max="1" step="0.05" value="0.6">
+            <label for="slider-master">Master Volume:</label>
+            <input type="range" id="slider-master" min="0" max="1" step="0.05" value="0.8">
+            <span id="val-master" class="slider-val-badge">80%</span>
           </div>
+
           <div class="slider-group">
-            <span>River Ambient:</span>
-            <input type="range" id="slider-ambient" min="0" max="1" step="0.05" value="0.7">
+            <label for="slider-music">Music Volume:</label>
+            <input type="range" id="slider-music" min="0" max="1" step="0.05" value="0.65">
+            <span id="val-music" class="slider-val-badge">65%</span>
           </div>
+
           <div class="slider-group">
-            <span>Sound Effects:</span>
+            <label for="slider-ambient">River & Nature:</label>
+            <input type="range" id="slider-ambient" min="0" max="1" step="0.05" value="0.75">
+            <span id="val-ambient" class="slider-val-badge">75%</span>
+          </div>
+
+          <div class="slider-group">
+            <label for="slider-sfx">Sound Effects:</label>
             <input type="range" id="slider-sfx" min="0" max="1" step="0.05" value="0.8">
+            <span id="val-sfx" class="slider-val-badge">80%</span>
           </div>
-          <button id="btn-close-settings" class="cozy-btn" style="margin-top: 18px;">Apply & Close</button>
+
+          <div style="display: flex; justify-content: center; gap: 10px; margin-top: 14px;">
+            <button id="btn-toggle-mute" class="cozy-btn secondary" style="padding: 8px 16px; font-size: 0.9rem;">
+              🔊 Sound On
+            </button>
+            <button id="btn-reset-progress" class="cozy-btn danger" style="padding: 8px 16px; font-size: 0.9rem;">
+              ↺ Reset Progress
+            </button>
+          </div>
+
+          <button id="btn-close-settings" class="cozy-btn" style="margin-top: 16px; width: 100%;">
+            Save & Close
+          </button>
         </div>
 
         <!-- 4. PAUSE CARD -->
-        <div id="modal-card-pause" class="paper-card modal-card hidden" style="width: 320px;">
-          <h2 style="margin-bottom: 18px; color: #2b583f;">Drifting at Rest</h2>
+        <div id="modal-card-pause" class="paper-card modal-card hidden" style="width: 340px;">
+          <h2 style="margin-bottom: 4px; color: #2b583f;">Drifting at Rest ⏸️</h2>
+          <p id="pause-level-info" style="font-size: 0.85rem; color: #6a8870; margin-bottom: 16px;">Level 01 — Morning Creek</p>
           <div class="btn-stack" style="width: 100%;">
-            <button id="btn-resume" class="cozy-btn">Resume Drift</button>
-            <button id="btn-pause-how" class="cozy-btn secondary">How to Sail</button>
-            <button id="btn-restart" class="cozy-btn secondary">Restart Level</button>
-            <button id="btn-pause-levels" class="cozy-btn secondary">Level Select</button>
-            <button id="btn-pause-settings" class="cozy-btn secondary">Audio Settings</button>
+            <button id="btn-resume" class="cozy-btn">Resume Drift ⛵</button>
+            <button id="btn-restart" class="cozy-btn secondary">Restart Level ↺</button>
+            <button id="btn-pause-how" class="cozy-btn secondary">How to Sail 📖</button>
+            <button id="btn-pause-settings" class="cozy-btn secondary">Audio Settings 🎵</button>
+            <button id="btn-pause-levels" class="cozy-btn secondary">River Map 🗺️</button>
           </div>
         </div>
 
         <!-- 5. LEVEL COMPLETE CARD -->
-        <div id="modal-card-level-complete" class="paper-card modal-card hidden" style="width: 360px;">
-          <h2 style="font-size: 1.7rem; color: #2b583f; margin-bottom: 2px;">Journey Completed!</h2>
-          <p style="color: #6c8c72; font-size: 0.95rem;">You arrived safely at the harbor</p>
+        <div id="modal-card-level-complete" class="paper-card modal-card hidden" style="width: 380px;">
+          <h2 style="font-size: 1.7rem; color: #2b583f; margin-bottom: 2px;">Journey Completed! 🌸</h2>
+          <p id="result-rating-title" style="color: #6c8c72; font-size: 0.95rem; font-family: 'Yomogi', cursive;">
+            You arrived safely at the harbor
+          </p>
           <div id="result-stars" class="result-stars">⭐⭐⭐</div>
-          <p id="result-score" style="font-weight: 700; color: #d97706; margin-bottom: 20px; font-size: 1.15rem;">Treasures: 10 / 10</p>
+          <p id="result-score" style="font-weight: 700; color: #d97706; margin-bottom: 18px; font-size: 1.15rem;">
+            Treasures: 10 / 10
+          </p>
           <div class="btn-stack" style="width: 100%;">
             <button id="btn-next-level" class="cozy-btn">Next Journey ➔</button>
-            <button id="btn-replay" class="cozy-btn secondary">Sail Again</button>
-            <button id="btn-result-levels" class="cozy-btn secondary">Level Select</button>
+            <button id="btn-replay" class="cozy-btn secondary">Sail Again ↺</button>
+            <button id="btn-result-levels" class="cozy-btn secondary">River Map 🗺️</button>
           </div>
         </div>
 
         <!-- 6. GAME OVER CARD -->
-        <div id="modal-card-game-over" class="paper-card modal-card hidden" style="width: 340px;">
-          <h2 style="font-size: 1.5rem; color: #b91c1c; margin-bottom: 6px;">Origami Unfolded</h2>
-          <p style="color: #6c8c72; font-size: 0.95rem; margin-bottom: 18px;">The paper absorbed too much river mist.</p>
+        <div id="modal-card-game-over" class="paper-card modal-card hidden" style="width: 350px;">
+          <h2 style="font-size: 1.5rem; color: #b91c1c; margin-bottom: 6px;">Origami Unfolded 🍃</h2>
+          <p style="color: #6c8c72; font-size: 0.95rem; margin-bottom: 18px;">
+            The paper boat took on gentle water.<br>Every peaceful river has calm shores.
+          </p>
           <div class="btn-stack" style="width: 100%;">
-            <button id="btn-gameover-respawn" class="cozy-btn">Respawn at Lantern</button>
-            <button id="btn-gameover-restart" class="cozy-btn secondary">Restart Level</button>
-            <button id="btn-gameover-levels" class="cozy-btn secondary">Level Select</button>
+            <button id="btn-gameover-respawn" class="cozy-btn">Respawn at Lantern 🏮</button>
+            <button id="btn-gameover-restart" class="cozy-btn secondary">Restart Level ↺</button>
+            <button id="btn-gameover-levels" class="cozy-btn secondary">River Map 🗺️</button>
           </div>
+        </div>
+      </div>
+
+      <!-- PORTRAIT ORIENTATION ADVISORY -->
+      <div id="portrait-advisory" class="portrait-advisory hidden">
+        <div class="portrait-box">
+          <div class="rotate-icon">📱</div>
+          <h3 style="font-size: 1.3rem; margin-bottom: 8px;">Please Rotate to Landscape</h3>
+          <p style="font-size: 0.9rem; line-height: 1.5; color: #c4d7cd;">
+            Little Paper Boat is designed for a wonderful widescreen river journey.
+          </p>
         </div>
       </div>
     `;
@@ -208,6 +311,7 @@ export class UIManager {
     this.mainMenuEl = document.getElementById('screen-main-menu')!;
     this.levelSelectEl = document.getElementById('screen-level-select')!;
     this.hudEl = document.getElementById('hud-overlay')!;
+    this.portraitAdvisoryEl = document.getElementById('portrait-advisory')!;
 
     // Grab single modal layer & cards
     this.modalLayerEl = document.getElementById('modal-layer')!;
@@ -223,6 +327,7 @@ export class UIManager {
     this.hudLevelSubtitle = document.getElementById('hud-subtitle')!;
     this.hudCollectibleBadge = document.getElementById('hud-collectible')!;
     this.hudProgressBar = document.getElementById('hud-progress-bar')!;
+    this.hudBoatMarker = document.getElementById('hud-boat-marker')!;
     this.hudIntegrityEl = document.getElementById('hud-integrity')!;
     this.hudCheckpointBannerEl = document.getElementById('hud-checkpoint-banner')!;
 
@@ -230,7 +335,13 @@ export class UIManager {
     this.resultStarsEl = document.getElementById('result-stars')!;
     this.resultScoreEl = document.getElementById('result-score')!;
 
+    // Grab Map elements
+    this.mapScrollViewport = document.getElementById('map-scroll-viewport')!;
+    this.mapTotalStarsEl = document.getElementById('map-total-stars')!;
+    this.mapTotalCollectiblesEl = document.getElementById('map-total-collectibles')!;
+
     this.bindEvents();
+    this.updateMainMenuButtonText();
   }
 
   // ==========================================
@@ -250,6 +361,8 @@ export class UIManager {
       return;
     }
 
+    this.audio.playPaperRustle();
+
     // 2. Unhide only the requested modal card
     switch (modal) {
       case 'TUTORIAL':
@@ -259,10 +372,7 @@ export class UIManager {
         this.modalCardAbout.classList.remove('hidden');
         break;
       case 'SETTINGS':
-        const vols = ProgressionManager.getVolumes();
-        (document.getElementById('slider-music') as HTMLInputElement).value = vols.music.toString();
-        (document.getElementById('slider-ambient') as HTMLInputElement).value = vols.ambient.toString();
-        (document.getElementById('slider-sfx') as HTMLInputElement).value = vols.sfx.toString();
+        this.syncSettingsSliders();
         this.modalCardSettings.classList.remove('hidden');
         break;
       case 'PAUSE':
@@ -287,6 +397,7 @@ export class UIManager {
     const previous = this.activeModal;
     this.activeModal = 'NONE';
 
+    this.audio.playPaperRustle();
     if (this.onModalStateChange) this.onModalStateChange(previous, false);
     return this.modalReturnState;
   }
@@ -308,15 +419,47 @@ export class UIManager {
     return this.activeModal !== 'NONE';
   }
 
+  private syncSettingsSliders(): void {
+    const vols = ProgressionManager.getVolumes();
+    const setVal = (id: string, badgeId: string, val: number) => {
+      const slider = document.getElementById(id) as HTMLInputElement;
+      const badge = document.getElementById(badgeId);
+      if (slider) slider.value = val.toString();
+      if (badge) badge.textContent = `${Math.round(val * 100)}%`;
+    };
+
+    setVal('slider-master', 'val-master', vols.master);
+    setVal('slider-music', 'val-music', vols.music);
+    setVal('slider-ambient', 'val-ambient', vols.ambient);
+    setVal('slider-sfx', 'val-sfx', vols.sfx);
+
+    const muteBtn = document.getElementById('btn-toggle-mute');
+    if (muteBtn) {
+      muteBtn.textContent = this.audio.isSoundMuted() ? '🔇 Unmute' : '🔊 Sound On';
+    }
+  }
+
   // ==========================================
   // EVENT BINDINGS
   // ==========================================
 
   private bindEvents(): void {
+    // Helper to attach click with cozy audio tap
+    const clickWithAudio = (id: string, fn: () => void) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.audio.init();
+          this.audio.resume();
+          this.audio.playButtonClick();
+          fn();
+        });
+      }
+    };
+
     // Main Menu: Start Journey
-    document.getElementById('btn-play')?.addEventListener('click', () => {
-      this.audio.init();
-      this.audio.resume();
+    clickWithAudio('btn-play', () => {
       if (this.onPlayClicked) {
         let targetLevel = 1;
         for (let i = 1; i <= 10; i++) {
@@ -329,36 +472,44 @@ export class UIManager {
       }
     });
 
-    // Main Menu: Level Selection
-    document.getElementById('btn-levels')?.addEventListener('click', () => {
-      this.audio.init();
+    // Main Menu: Level Selection (River Map)
+    clickWithAudio('btn-levels', () => {
       this.showLevelSelection();
       if (this.onOpenLevelSelect) this.onOpenLevelSelect();
     });
 
     // Level Selection: Back to Menu
-    document.getElementById('btn-back-menu')?.addEventListener('click', () => {
+    clickWithAudio('btn-back-menu', () => {
       this.showMainMenu();
       if (this.onBackToMenu) this.onBackToMenu();
     });
 
+    // Map scroll arrows
+    clickWithAudio('btn-map-left', () => {
+      this.mapScrollViewport.scrollBy({ left: -260, behavior: 'smooth' });
+    });
+
+    clickWithAudio('btn-map-right', () => {
+      this.mapScrollViewport.scrollBy({ left: 260, behavior: 'smooth' });
+    });
+
     // Main Menu: How to Sail
-    document.getElementById('btn-how')?.addEventListener('click', () => {
+    clickWithAudio('btn-how', () => {
       this.openModal('TUTORIAL', 'MAIN_MENU');
     });
 
     // Main Menu: Audio Settings
-    document.getElementById('btn-settings')?.addEventListener('click', () => {
+    clickWithAudio('btn-settings', () => {
       this.openModal('SETTINGS', 'MAIN_MENU');
     });
 
     // Main Menu: About
-    document.getElementById('btn-about')?.addEventListener('click', () => {
+    clickWithAudio('btn-about', () => {
       this.openModal('ABOUT', 'MAIN_MENU');
     });
 
     // Modal: Understood (Tutorial)
-    document.getElementById('btn-tutorial-understood')?.addEventListener('click', () => {
+    clickWithAudio('btn-tutorial-understood', () => {
       ProgressionManager.markTutorialSeen();
       this.closeModal();
       if (this.onTutorialUnderstood) {
@@ -367,85 +518,177 @@ export class UIManager {
     });
 
     // Modal: Close About
-    document.getElementById('btn-close-about')?.addEventListener('click', () => {
+    clickWithAudio('btn-close-about', () => {
       this.closeModal();
     });
 
-    // Modal: Close Audio Settings
-    document.getElementById('btn-close-settings')?.addEventListener('click', () => {
-      const music = parseFloat((document.getElementById('slider-music') as HTMLInputElement).value);
-      const ambient = parseFloat((document.getElementById('slider-ambient') as HTMLInputElement).value);
-      const sfx = parseFloat((document.getElementById('slider-sfx') as HTMLInputElement).value);
-      this.audio.setVolumes(music, ambient, sfx);
+    // Settings Sliders Live Input Listeners
+    const bindSlider = (id: string, badgeId: string) => {
+      const slider = document.getElementById(id) as HTMLInputElement;
+      const badge = document.getElementById(badgeId);
+      if (slider && badge) {
+        slider.addEventListener('input', () => {
+          const val = parseFloat(slider.value);
+          badge.textContent = `${Math.round(val * 100)}%`;
+          this.applySettingsFromSliders();
+          this.audio.playSliderTick();
+        });
+      }
+    };
+
+    bindSlider('slider-master', 'val-master');
+    bindSlider('slider-music', 'val-music');
+    bindSlider('slider-ambient', 'val-ambient');
+    bindSlider('slider-sfx', 'val-sfx');
+
+    // Settings: Toggle Mute
+    clickWithAudio('btn-toggle-mute', () => {
+      const muted = this.audio.toggleMute();
+      const muteBtn = document.getElementById('btn-toggle-mute');
+      if (muteBtn) {
+        muteBtn.textContent = muted ? '🔇 Unmute' : '🔊 Sound On';
+      }
+    });
+
+    // Settings: Reset Progress
+    clickWithAudio('btn-reset-progress', () => {
+      if (window.confirm('Reset all river journeys and return to Level 1?')) {
+        ProgressionManager.resetAllProgress();
+        this.updateMainMenuButtonText();
+        this.showLevelSelection(false);
+        this.closeModal();
+      }
+    });
+
+    // Settings: Close
+    clickWithAudio('btn-close-settings', () => {
+      this.applySettingsFromSliders();
       this.closeModal();
     });
 
     // In-game Pause button
-    document.getElementById('btn-pause')?.addEventListener('click', () => {
+    clickWithAudio('btn-pause', () => {
       this.openModal('PAUSE', 'PLAYING');
     });
 
     // Pause Modal: Resume Drift
-    document.getElementById('btn-resume')?.addEventListener('click', () => {
+    clickWithAudio('btn-resume', () => {
       this.closeModal();
       if (this.onResumeGame) this.onResumeGame();
     });
 
     // Pause Modal: How to Sail
-    document.getElementById('btn-pause-how')?.addEventListener('click', () => {
+    clickWithAudio('btn-pause-how', () => {
       this.openModal('TUTORIAL', 'PAUSED');
     });
 
     // Pause Modal: Restart Level
-    document.getElementById('btn-restart')?.addEventListener('click', () => {
+    clickWithAudio('btn-restart', () => {
       this.closeModal();
       if (this.onRestartLevel) this.onRestartLevel();
     });
 
     // Pause Modal: Level Selection
-    document.getElementById('btn-pause-levels')?.addEventListener('click', () => {
+    clickWithAudio('btn-pause-levels', () => {
       this.closeModal();
       if (this.onExitToLevelSelect) this.onExitToLevelSelect();
     });
 
     // Pause Modal: Settings
-    document.getElementById('btn-pause-settings')?.addEventListener('click', () => {
+    clickWithAudio('btn-pause-settings', () => {
       this.openModal('SETTINGS', 'PAUSED');
     });
 
     // Level Complete Modal: Next Journey
-    document.getElementById('btn-next-level')?.addEventListener('click', () => {
+    clickWithAudio('btn-next-level', () => {
       this.closeModal();
       if (this.onNextLevel) this.onNextLevel();
     });
 
     // Level Complete Modal: Sail Again (Replay)
-    document.getElementById('btn-replay')?.addEventListener('click', () => {
+    clickWithAudio('btn-replay', () => {
       this.closeModal();
       if (this.onRestartLevel) this.onRestartLevel();
     });
 
     // Level Complete Modal: Level Select
-    document.getElementById('btn-result-levels')?.addEventListener('click', () => {
+    clickWithAudio('btn-result-levels', () => {
       this.closeModal();
       if (this.onExitToLevelSelect) this.onExitToLevelSelect();
     });
 
     // Game Over Modal
-    document.getElementById('btn-gameover-respawn')?.addEventListener('click', () => {
+    clickWithAudio('btn-gameover-respawn', () => {
       this.closeModal();
       if (this.onGameOverRespawn) this.onGameOverRespawn();
     });
 
-    document.getElementById('btn-gameover-restart')?.addEventListener('click', () => {
+    clickWithAudio('btn-gameover-restart', () => {
       this.closeModal();
       if (this.onRestartLevel) this.onRestartLevel();
     });
 
-    document.getElementById('btn-gameover-levels')?.addEventListener('click', () => {
+    clickWithAudio('btn-gameover-levels', () => {
       this.closeModal();
       if (this.onExitToLevelSelect) this.onExitToLevelSelect();
     });
+
+    // Global keyboard map navigation (Left / Right arrows in level select)
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (!this.levelSelectEl.classList.contains('hidden') && this.activeModal === 'NONE') {
+        if (e.key === 'ArrowRight') {
+          this.mapScrollViewport.scrollBy({ left: 200, behavior: 'smooth' });
+        } else if (e.key === 'ArrowLeft') {
+          this.mapScrollViewport.scrollBy({ left: -200, behavior: 'smooth' });
+        } else if (e.key === 'Escape') {
+          this.showMainMenu();
+          if (this.onBackToMenu) this.onBackToMenu();
+        }
+      }
+    });
+  }
+
+  private applySettingsFromSliders(): void {
+    const master = parseFloat((document.getElementById('slider-master') as HTMLInputElement)?.value || '0.8');
+    const music = parseFloat((document.getElementById('slider-music') as HTMLInputElement)?.value || '0.65');
+    const ambient = parseFloat((document.getElementById('slider-ambient') as HTMLInputElement)?.value || '0.75');
+    const sfx = parseFloat((document.getElementById('slider-sfx') as HTMLInputElement)?.value || '0.8');
+    this.audio.setVolumes(music, ambient, sfx, master);
+  }
+
+  private setupOrientationAdvisory(): void {
+    const checkOrientation = () => {
+      const isPortrait = window.innerHeight > window.innerWidth && window.innerWidth <= 768;
+      if (isPortrait) {
+        this.portraitAdvisoryEl.classList.remove('hidden');
+      } else {
+        this.portraitAdvisoryEl.classList.add('hidden');
+      }
+    };
+
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+  }
+
+  public updateMainMenuButtonText(): void {
+    const playBtn = document.getElementById('btn-play');
+    if (!playBtn) return;
+
+    let highestUnlocked = 1;
+    let anyCompleted = false;
+    for (let i = 1; i <= 10; i++) {
+      const rec = ProgressionManager.getLevelRecord(i);
+      if (rec.unlocked) highestUnlocked = i;
+      if (rec.completed) anyCompleted = true;
+    }
+
+    if (!anyCompleted && highestUnlocked === 1) {
+      playBtn.textContent = 'Start Journey';
+    } else {
+      const title = LEVEL_DATA[highestUnlocked]?.title || `Level ${highestUnlocked}`;
+      playBtn.textContent = `Continue (0${highestUnlocked}: ${title})`;
+    }
   }
 
   // ==========================================
@@ -454,6 +697,7 @@ export class UIManager {
 
   public showMainMenu(notify: boolean = true): void {
     this.closeModal();
+    this.updateMainMenuButtonText();
     this.mainMenuEl.classList.remove('hidden');
     this.levelSelectEl.classList.add('hidden');
     this.hudEl.classList.add('hidden');
@@ -467,40 +711,78 @@ export class UIManager {
     this.hudEl.classList.add('hidden');
     if (notify && this.onOpenLevelSelect) this.onOpenLevelSelect();
 
-    // Populate level cards
-    const grid = document.getElementById('level-grid-container')!;
-    grid.innerHTML = '';
+    // Populate 10-level illustrated river map
+    const track = document.getElementById('level-grid-container')!;
+    track.innerHTML = '';
+
+    let totalStars = 0;
+    let totalCollectibles = 0;
+    let latestUnlockedElement: HTMLElement | null = null;
 
     for (let id = 1; id <= 10; id++) {
       const cfg = LEVEL_DATA[id];
       const record = ProgressionManager.getLevelRecord(id);
       const isUnlocked = ProgressionManager.isLevelUnlocked(id);
+      const isCompleted = record.completed;
+
+      totalStars += record.stars;
+      totalCollectibles += record.bestCollectibles;
 
       const card = document.createElement('div');
-      card.className = `level-card ${isUnlocked ? '' : 'locked'}`;
+      card.id = `realm-node-${id}`;
+      card.className = `realm-card ${isUnlocked ? (isCompleted ? 'completed' : 'unlocked') : 'locked'}`;
+      card.tabIndex = isUnlocked ? 0 : -1;
 
       let starDisplay = '';
       for (let s = 1; s <= 3; s++) {
         starDisplay += s <= record.stars ? '⭐' : '✩';
       }
 
+      const icon = REALM_ICONS[id] || '⛵';
+
       card.innerHTML = `
-        <div class="level-card-number">${isUnlocked ? `0${id}`.slice(-2) : '🔒'}</div>
-        <div class="level-card-name">${cfg.title}</div>
-        <div class="level-card-stars">${isUnlocked ? starDisplay : 'Locked'}</div>
+        <div class="realm-icon-badge">${isUnlocked ? icon : '🔒'}</div>
+        <div class="realm-number">REALM 0${id}</div>
+        <div class="realm-title">${cfg.title}</div>
+        <div class="realm-subtitle">${cfg.subtitle}</div>
+        <div class="realm-stars">${isUnlocked ? starDisplay : 'Locked'}</div>
+        <div class="realm-collectible">${isUnlocked ? `🌸 ${record.bestCollectibles} / ${cfg.collectibles.length}` : `Requires Level ${id - 1}`}</div>
+        <button class="realm-action-btn">
+          ${isUnlocked ? (isCompleted ? 'Replay ↺' : 'Sail River ⛵') : 'Locked 🔒'}
+        </button>
       `;
 
       if (isUnlocked) {
-        card.addEventListener('click', () => {
+        latestUnlockedElement = card;
+        const launchLevel = () => {
           this.audio.init();
           this.audio.resume();
+          this.audio.playButtonClick();
           if (this.onPlayClicked) {
             this.onPlayClicked(id);
+          }
+        };
+
+        card.addEventListener('click', launchLevel);
+        card.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            launchLevel();
           }
         });
       }
 
-      grid.appendChild(card);
+      track.appendChild(card);
+    }
+
+    if (this.mapTotalStarsEl) this.mapTotalStarsEl.textContent = totalStars.toString();
+    if (this.mapTotalCollectiblesEl) this.mapTotalCollectiblesEl.textContent = totalCollectibles.toString();
+
+    // Auto-scroll into view for the latest unlocked level
+    if (latestUnlockedElement) {
+      setTimeout(() => {
+        latestUnlockedElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }, 100);
     }
   }
 
@@ -518,6 +800,20 @@ export class UIManager {
     this.updateCollectibles(0, totalCollectibles);
     this.updateIntegrity(3, 3);
     this.updateProgress(0);
+
+    const pauseInfo = document.getElementById('pause-level-info');
+    if (pauseInfo) {
+      pauseInfo.textContent = `${title} • ${subtitle}`;
+    }
+
+    // Auto-fade steering hint after 4 seconds
+    const hint = document.getElementById('hud-touch-hint');
+    if (hint) {
+      hint.style.opacity = '1';
+      setTimeout(() => {
+        if (hint) hint.style.opacity = '0';
+      }, 4000);
+    }
   }
 
   public hideHUD(): void {
@@ -530,6 +826,14 @@ export class UIManager {
       str += i <= current ? '⛵ ' : '🤍 ';
     }
     this.hudIntegrityEl.textContent = str.trim();
+
+    // Visual shake animation on damage
+    if (current < max) {
+      this.hudIntegrityEl.classList.add('shake');
+      setTimeout(() => {
+        this.hudIntegrityEl.classList.remove('shake');
+      }, 400);
+    }
   }
 
   public showCheckpointBanner(text: string = '🏮 Lantern Checkpoint Reached'): void {
@@ -544,11 +848,18 @@ export class UIManager {
 
   public updateCollectibles(collected: number, total: number): void {
     this.hudCollectibleBadge.textContent = `🌸 ${collected} / ${total}`;
+    this.hudCollectibleBadge.classList.add('bounce');
+    setTimeout(() => {
+      this.hudCollectibleBadge.classList.remove('bounce');
+    }, 220);
   }
 
   public updateProgress(progressRatio: number): void {
     const pct = Math.max(0, Math.min(100, Math.floor(progressRatio * 100)));
     this.hudProgressBar.style.width = `${pct}%`;
+    if (this.hudBoatMarker) {
+      this.hudBoatMarker.style.left = `${pct}%`;
+    }
   }
 
   public showResultModal(stars: number, collected: number, total: number, hasNextLevel: boolean): void {
@@ -558,6 +869,17 @@ export class UIManager {
     }
     this.resultStarsEl.textContent = starsStr;
     this.resultScoreEl.textContent = `Treasures: ${collected} / ${total}`;
+
+    const ratingEl = document.getElementById('result-rating-title');
+    if (ratingEl) {
+      if (stars === 3) {
+        ratingEl.textContent = 'Master Explorer! Pristine journey 🌸';
+      } else if (stars === 2) {
+        ratingEl.textContent = 'Skilled Navigator! Beautiful drift 🍃';
+      } else {
+        ratingEl.textContent = 'Safe Passage! Peaceful arrival ⛵';
+      }
+    }
 
     const nextBtn = document.getElementById('btn-next-level') as HTMLElement;
     if (!hasNextLevel) {

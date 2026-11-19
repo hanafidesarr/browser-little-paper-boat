@@ -41,17 +41,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 365, lateralOffset: -1.4, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 20, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 45, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 80, lateralOffset: -1.2, type: 'golden_leaf' },
-      { distance: 115, lateralOffset: 1.2, type: 'golden_leaf' },
-      { distance: 155, lateralOffset: -1.4, type: 'golden_leaf' },
-      { distance: 185, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 230, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 265, lateralOffset: -1.0, type: 'golden_leaf' },
-      { distance: 305, lateralOffset: 1.2, type: 'golden_leaf' },
-      { distance: 350, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 372, lateralOffset: 1.0, type: 'golden_leaf' }
+      { distance: 20, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 45, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 80, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 115, lateralOffset: 1.2, type: 'red_gem' },
+      { distance: 155, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 185, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 230, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 265, lateralOffset: -1.0, type: 'red_gem' },
+      { distance: 305, lateralOffset: 1.2, type: 'red_gem' },
+      { distance: 350, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 372, lateralOffset: 1.0, type: 'red_gem' }
     ],
     environment: {
       seed: 101,
@@ -132,21 +132,21 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 438, lateralOffset: 1.2, type: 'frog', radius: 0.7 }
     ],
     collectibles: [
-      { distance: 25, lateralOffset: -1.0, type: 'lily_flower' },
-      { distance: 65, lateralOffset: 1.5, type: 'lily_flower' },
-      { distance: 110, lateralOffset: -1.2, type: 'lily_flower' },
-      { distance: 145, lateralOffset: 1.6, type: 'lily_flower' },
+      { distance: 25, lateralOffset: -1.0, type: 'red_gem' },
+      { distance: 65, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 110, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 145, lateralOffset: 1.6, type: 'red_gem' },
       // Fork Collectibles (Rewards in both channels)
-      { distance: 200, lateralOffset: -5.0, type: 'lily_flower' }, // Left channel flower
-      { distance: 210, lateralOffset: 5.2, type: 'lily_flower' },  // Right channel flower (risk/reward near whirlpool!)
-      { distance: 230, lateralOffset: -5.2, type: 'lily_flower' }, // Left channel flower
-      { distance: 242, lateralOffset: 5.0, type: 'lily_flower' },  // Right channel flower
+      { distance: 200, lateralOffset: -5.0, type: 'red_gem' }, // Left channel flower
+      { distance: 210, lateralOffset: 5.2, type: 'red_gem' },  // Right channel flower (risk/reward near whirlpool!)
+      { distance: 230, lateralOffset: -5.2, type: 'red_gem' }, // Left channel flower
+      { distance: 242, lateralOffset: 5.0, type: 'red_gem' },  // Right channel flower
       // Downstream
-      { distance: 280, lateralOffset: 0.0, type: 'lily_flower' },
-      { distance: 325, lateralOffset: -1.6, type: 'lily_flower' },
-      { distance: 365, lateralOffset: 1.5, type: 'lily_flower' },
-      { distance: 410, lateralOffset: -1.0, type: 'lily_flower' },
-      { distance: 442, lateralOffset: 1.2, type: 'lily_flower' }
+      { distance: 280, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 325, lateralOffset: -1.6, type: 'red_gem' },
+      { distance: 365, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 410, lateralOffset: -1.0, type: 'red_gem' },
+      { distance: 442, lateralOffset: 1.2, type: 'red_gem' }
     ],
     environment: {
       seed: 202,
@@ -212,17 +212,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 456, lateralOffset: 1.2, type: 'lily_pads', radius: 1.2 }
     ],
     collectibles: [
-      { distance: 22, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 60, lateralOffset: -1.2, type: 'golden_leaf' },
-      { distance: 105, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 135, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 178, lateralOffset: -1.4, type: 'golden_leaf' },
-      { distance: 220, lateralOffset: 1.5, type: 'golden_leaf' },
-      { distance: 268, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 310, lateralOffset: -1.2, type: 'golden_leaf' },
-      { distance: 358, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 405, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 450, lateralOffset: -1.2, type: 'golden_leaf' }
+      { distance: 22, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 60, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 105, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 135, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 178, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 220, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 268, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 310, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 358, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 405, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 450, lateralOffset: -1.2, type: 'red_gem' }
     ],
     environment: {
       seed: 303,
@@ -283,17 +283,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 450, lateralOffset: -1.2, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 20, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 60, lateralOffset: -1.4, type: 'starlight' },
-      { distance: 90, lateralOffset: 1.4, type: 'starlight' },
-      { distance: 135, lateralOffset: -1.2, type: 'starlight' },
-      { distance: 180, lateralOffset: 1.5, type: 'starlight' },
-      { distance: 210, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 255, lateralOffset: -1.5, type: 'starlight' },
-      { distance: 300, lateralOffset: 1.4, type: 'starlight' },
-      { distance: 350, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 395, lateralOffset: -1.4, type: 'starlight' },
-      { distance: 442, lateralOffset: 1.2, type: 'starlight' }
+      { distance: 20, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 60, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 90, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 135, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 180, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 210, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 255, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 300, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 350, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 395, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 442, lateralOffset: 1.2, type: 'red_gem' }
     ],
     environment: {
       seed: 404,
@@ -372,21 +372,21 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 475, lateralOffset: 1.3, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 25, lateralOffset: -1.2, type: 'golden_leaf' },
-      { distance: 75, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 125, lateralOffset: -1.5, type: 'golden_leaf' },
-      { distance: 175, lateralOffset: 0.0, type: 'golden_leaf' },
+      { distance: 25, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 75, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 125, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 175, lateralOffset: 0.0, type: 'red_gem' },
       // Fork Collectibles
-      { distance: 212, lateralOffset: -5.5, type: 'golden_leaf' },
-      { distance: 225, lateralOffset: 5.5, type: 'golden_leaf' },
-      { distance: 245, lateralOffset: -5.5, type: 'golden_leaf' },
-      { distance: 255, lateralOffset: 5.5, type: 'golden_leaf' },
+      { distance: 212, lateralOffset: -5.5, type: 'red_gem' },
+      { distance: 225, lateralOffset: 5.5, type: 'red_gem' },
+      { distance: 245, lateralOffset: -5.5, type: 'red_gem' },
+      { distance: 255, lateralOffset: 5.5, type: 'red_gem' },
       // Downstream
-      { distance: 295, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 345, lateralOffset: -1.5, type: 'golden_leaf' },
-      { distance: 395, lateralOffset: 1.6, type: 'golden_leaf' },
-      { distance: 445, lateralOffset: -1.2, type: 'golden_leaf' },
-      { distance: 480, lateralOffset: 1.0, type: 'golden_leaf' }
+      { distance: 295, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 345, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 395, lateralOffset: 1.6, type: 'red_gem' },
+      { distance: 445, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 480, lateralOffset: 1.0, type: 'red_gem' }
     ],
     environment: {
       seed: 505,
@@ -454,17 +454,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 468, lateralOffset: -1.2, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 20, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 60, lateralOffset: -1.2, type: 'golden_leaf' },
-      { distance: 105, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 140, lateralOffset: 0.0, type: 'golden_leaf' }, // Center under Bridge 1
-      { distance: 185, lateralOffset: 1.5, type: 'golden_leaf' },
-      { distance: 235, lateralOffset: -1.4, type: 'golden_leaf' },
-      { distance: 280, lateralOffset: 1.2, type: 'golden_leaf' },
-      { distance: 320, lateralOffset: 0.0, type: 'golden_leaf' }, // Center under Bridge 2
-      { distance: 370, lateralOffset: -1.5, type: 'golden_leaf' },
-      { distance: 420, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 465, lateralOffset: 0.0, type: 'golden_leaf' }
+      { distance: 20, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 60, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 105, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 140, lateralOffset: 0.0, type: 'red_gem' }, // Center under Bridge 1
+      { distance: 185, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 235, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 280, lateralOffset: 1.2, type: 'red_gem' },
+      { distance: 320, lateralOffset: 0.0, type: 'red_gem' }, // Center under Bridge 2
+      { distance: 370, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 420, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 465, lateralOffset: 0.0, type: 'red_gem' }
     ],
     environment: {
       seed: 606,
@@ -544,21 +544,21 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 460, lateralOffset: 1.2, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 22, lateralOffset: -1.0, type: 'lily_flower' },
-      { distance: 65, lateralOffset: 1.4, type: 'lily_flower' },
-      { distance: 110, lateralOffset: -1.2, type: 'lily_flower' },
-      { distance: 160, lateralOffset: 1.5, type: 'lily_flower' },
+      { distance: 22, lateralOffset: -1.0, type: 'red_gem' },
+      { distance: 65, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 110, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 160, lateralOffset: 1.5, type: 'red_gem' },
       // Fork Collectibles
-      { distance: 202, lateralOffset: -5.2, type: 'lily_flower' },
-      { distance: 212, lateralOffset: 5.3, type: 'lily_flower' },
-      { distance: 232, lateralOffset: -5.3, type: 'lily_flower' },
-      { distance: 242, lateralOffset: 5.2, type: 'lily_flower' },
+      { distance: 202, lateralOffset: -5.2, type: 'red_gem' },
+      { distance: 212, lateralOffset: 5.3, type: 'red_gem' },
+      { distance: 232, lateralOffset: -5.3, type: 'red_gem' },
+      { distance: 242, lateralOffset: 5.2, type: 'red_gem' },
       // Downstream
-      { distance: 285, lateralOffset: 0.0, type: 'lily_flower' },
-      { distance: 335, lateralOffset: -1.5, type: 'lily_flower' },
-      { distance: 385, lateralOffset: 1.6, type: 'lily_flower' },
-      { distance: 430, lateralOffset: -1.2, type: 'lily_flower' },
-      { distance: 465, lateralOffset: 1.0, type: 'lily_flower' }
+      { distance: 285, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 335, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 385, lateralOffset: 1.6, type: 'red_gem' },
+      { distance: 430, lateralOffset: -1.2, type: 'red_gem' },
+      { distance: 465, lateralOffset: 1.0, type: 'red_gem' }
     ],
     environment: {
       seed: 707,
@@ -619,17 +619,17 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 468, lateralOffset: 1.3, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 20, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 65, lateralOffset: -1.4, type: 'starlight' },
-      { distance: 115, lateralOffset: 1.5, type: 'starlight' },
-      { distance: 165, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 212, lateralOffset: -1.6, type: 'starlight' },
-      { distance: 262, lateralOffset: 1.6, type: 'starlight' },
-      { distance: 310, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 360, lateralOffset: -1.5, type: 'starlight' },
-      { distance: 410, lateralOffset: 1.4, type: 'starlight' },
-      { distance: 455, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 472, lateralOffset: -1.2, type: 'starlight' }
+      { distance: 20, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 65, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 115, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 165, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 212, lateralOffset: -1.6, type: 'red_gem' },
+      { distance: 262, lateralOffset: 1.6, type: 'red_gem' },
+      { distance: 310, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 360, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 410, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 455, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 472, lateralOffset: -1.2, type: 'red_gem' }
     ],
     environment: {
       seed: 808,
@@ -709,21 +709,21 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 488, lateralOffset: -1.4, type: 'duck', radius: 0.8 }
     ],
     collectibles: [
-      { distance: 22, lateralOffset: 1.2, type: 'starlight' },
-      { distance: 70, lateralOffset: -1.5, type: 'starlight' },
-      { distance: 120, lateralOffset: 1.6, type: 'starlight' },
-      { distance: 170, lateralOffset: 0.0, type: 'starlight' },
+      { distance: 22, lateralOffset: 1.2, type: 'red_gem' },
+      { distance: 70, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 120, lateralOffset: 1.6, type: 'red_gem' },
+      { distance: 170, lateralOffset: 0.0, type: 'red_gem' },
       // Fork Collectibles
-      { distance: 215, lateralOffset: -5.8, type: 'starlight' },
-      { distance: 232, lateralOffset: 5.8, type: 'starlight' },
-      { distance: 250, lateralOffset: -5.8, type: 'starlight' },
-      { distance: 262, lateralOffset: 5.8, type: 'starlight' },
+      { distance: 215, lateralOffset: -5.8, type: 'red_gem' },
+      { distance: 232, lateralOffset: 5.8, type: 'red_gem' },
+      { distance: 250, lateralOffset: -5.8, type: 'red_gem' },
+      { distance: 262, lateralOffset: 5.8, type: 'red_gem' },
       // Downstream
-      { distance: 300, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 352, lateralOffset: -1.6, type: 'starlight' },
-      { distance: 402, lateralOffset: 1.5, type: 'starlight' },
-      { distance: 452, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 492, lateralOffset: 1.2, type: 'starlight' }
+      { distance: 300, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 352, lateralOffset: -1.6, type: 'red_gem' },
+      { distance: 402, lateralOffset: 1.5, type: 'red_gem' },
+      { distance: 452, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 492, lateralOffset: 1.2, type: 'red_gem' }
     ],
     environment: {
       seed: 909,
@@ -818,23 +818,23 @@ export const LEVEL_DATA: { [id: number]: LevelConfig } = {
       { distance: 638, lateralOffset: -1.4, type: 'frog', radius: 0.7 }
     ],
     collectibles: [
-      { distance: 25, lateralOffset: 0.0, type: 'golden_leaf' },
-      { distance: 75, lateralOffset: -1.4, type: 'lily_flower' },
-      { distance: 125, lateralOffset: 1.6, type: 'starlight' },
-      { distance: 160, lateralOffset: 0.0, type: 'golden_leaf' }, // Center under Bridge 1
+      { distance: 25, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 75, lateralOffset: -1.4, type: 'red_gem' },
+      { distance: 125, lateralOffset: 1.6, type: 'red_gem' },
+      { distance: 160, lateralOffset: 0.0, type: 'red_gem' }, // Center under Bridge 1
       // Grand Island Collectibles
-      { distance: 228, lateralOffset: -6.0, type: 'golden_leaf' },
-      { distance: 242, lateralOffset: 6.0, type: 'starlight' },
-      { distance: 265, lateralOffset: -5.8, type: 'lily_flower' },
-      { distance: 278, lateralOffset: 5.8, type: 'golden_leaf' },
+      { distance: 228, lateralOffset: -6.0, type: 'red_gem' },
+      { distance: 242, lateralOffset: 6.0, type: 'red_gem' },
+      { distance: 265, lateralOffset: -5.8, type: 'red_gem' },
+      { distance: 278, lateralOffset: 5.8, type: 'red_gem' },
       // Post Island & Bridge 2
-      { distance: 320, lateralOffset: 0.0, type: 'starlight' },
-      { distance: 375, lateralOffset: -1.6, type: 'lily_flower' },
-      { distance: 430, lateralOffset: 0.0, type: 'golden_leaf' }, // Center under Bridge 2
-      { distance: 495, lateralOffset: 1.6, type: 'starlight' },
-      { distance: 550, lateralOffset: -1.5, type: 'lily_flower' },
-      { distance: 605, lateralOffset: 1.4, type: 'golden_leaf' },
-      { distance: 645, lateralOffset: 0.0, type: 'starlight' }
+      { distance: 320, lateralOffset: 0.0, type: 'red_gem' },
+      { distance: 375, lateralOffset: -1.6, type: 'red_gem' },
+      { distance: 430, lateralOffset: 0.0, type: 'red_gem' }, // Center under Bridge 2
+      { distance: 495, lateralOffset: 1.6, type: 'red_gem' },
+      { distance: 550, lateralOffset: -1.5, type: 'red_gem' },
+      { distance: 605, lateralOffset: 1.4, type: 'red_gem' },
+      { distance: 645, lateralOffset: 0.0, type: 'red_gem' }
     ],
     environment: {
       seed: 1010,

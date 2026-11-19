@@ -19,7 +19,8 @@ export type ModalType =
   | 'PAUSE'
   | 'LEVEL_COMPLETE'
   | 'GAME_OVER'
-  | 'INSTALL';
+  | 'INSTALL'
+  | 'DONATE_QRIS';
 
 const REALM_ICONS: { [id: number]: string } = {
   1: '🌿',
@@ -52,6 +53,7 @@ export class UIManager {
   private modalCardLevelComplete!: HTMLElement;
   private modalCardGameOver!: HTMLElement;
   private modalCardInstall!: HTMLElement;
+  private modalCardQRIS!: HTMLElement;
   private deferredInstallPrompt: any = null;
 
   // Active state tracking
@@ -103,17 +105,24 @@ export class UIManager {
       <!-- MAIN MENU SCREEN -->
       <div id="screen-main-menu" class="ui-screen">
         <div class="paper-card" style="max-width: 440px;">
-          <h1 class="game-title">⛵ Little Paper Boat</h1>
+          <!-- Studio / Game Brand Logo with background removed -->
+          <div class="menu-logo-container">
+            <img src="logo-catbox-transparent.png" alt="Little Paper Boat Logo" class="menu-logo-img" />
+          </div>
+          <h1 class="game-title">Little Paper Boat</h1>
           <p class="game-tagline">"A little boat. A wonderful journey."</p>
           <div class="btn-stack">
             <button id="btn-play" class="cozy-btn">Start Journey</button>
             <button id="btn-levels" class="cozy-btn secondary">River Map 🗺️</button>
-            <button id="btn-how" class="cozy-btn secondary">How to Sail ⛵</button>
             <button id="btn-settings" class="cozy-btn secondary">Game Settings ⚙️</button>
-            <button id="btn-about" class="cozy-btn secondary">About 📖</button>
-            <div style="display: flex; gap: 6px; width: 100%;">
-              <button id="btn-fullscreen-main" class="cozy-btn secondary" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" title="Toggle Fullscreen">⛶ Fullscreen</button>
-              <button id="btn-install-pwa" class="cozy-btn secondary" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" title="Install Progressive Web App">📱 Install App</button>
+            <!-- Support & Donations -->
+            <div class="donation-btn-group" style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
+              <button id="btn-donate-qris" class="cozy-btn secondary donate-qris-btn" style="flex: 1; padding: 9px 10px; font-size: 0.85rem;" title="Donasi via QRIS">
+                📱 QRIS Donasi
+              </button>
+              <a href="https://paypal.me/hanafidesar" target="_blank" rel="noopener noreferrer" class="cozy-btn secondary donate-paypal-btn" style="flex: 1; padding: 9px 10px; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px;" title="Dukung lewat PayPal (hanafidesar)">
+                🅿️ PayPal Me
+              </a>
             </div>
           </div>
           <p style="margin-top: 18px; font-size: 0.75rem; color: #769380; font-family: 'Yomogi', cursive;">
@@ -136,7 +145,7 @@ export class UIManager {
             </div>
             <div class="map-stats-pill">
               <span>⭐ <strong id="map-total-stars">0</strong>/30</span>
-              <span>🌸 <strong id="map-total-collectibles">0</strong>/100</span>
+              <span>💎 <strong id="map-total-collectibles">0</strong>/100</span>
             </div>
           </div>
 
@@ -158,9 +167,8 @@ export class UIManager {
           </div>
           <div class="hud-badges">
             <div id="hud-integrity" class="hud-integrity" title="Paper Boat Condition">⛵ ⛵ ⛵</div>
-            <div id="hud-collectible" class="hud-badge">🌸 0 / 10</div>
-            <button id="btn-hud-fullscreen" class="hud-pause-btn" title="Toggle Fullscreen">⛶</button>
-            <button id="btn-pause" class="hud-pause-btn" title="Pause [Esc]">⏸</button>
+            <div id="hud-collectible" class="hud-badge gem-badge" title="Red Gems Collected">💎 0 / 10</div>
+            <button id="btn-pause" class="hud-pause-btn" title="Menu / Pause [Esc]">⏸</button>
           </div>
         </div>
         <div id="hud-checkpoint-banner" class="hud-checkpoint-banner">🏮 Lantern Checkpoint Reached</div>
@@ -194,9 +202,9 @@ export class UIManager {
             </p>
           </div>
           <div style="background: rgba(254, 243, 199, 0.5); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;">
-            <p style="margin-bottom: 6px; font-weight: 700; color: #92400e;">🌸 Goal of the River:</p>
+            <p style="margin-bottom: 6px; font-weight: 700; color: #b91c1c;">💎 Goal of the River:</p>
             <p style="font-size: 0.88rem; line-height: 1.5; color: #78350f;">
-              Collect blossoms and golden leaves to earn 3 stars. Pass lantern checkpoints and glide through the finish arch!
+              Collect shimmering red gems along the currents to earn 3 stars. Pass lantern checkpoints and glide through the finish arch!
             </p>
           </div>
           <div style="text-align: center;">
@@ -212,9 +220,19 @@ export class UIManager {
             <p style="font-size: 1.05rem; font-weight: 700; color: #2b583f;">Engine: PlayCanvas 3D</p>
             <p style="font-size: 0.85rem; color: #577360;">WebGL Procedural Spline Adventure</p>
           </div>
-          <p style="font-size: 0.95rem; line-height: 1.6; color: #42584e; margin-bottom: 22px;">
+          <p style="font-size: 0.95rem; line-height: 1.6; color: #42584e; margin-bottom: 16px;">
             A cozy adventure about peaceful exploration. Follow winding rivers, listen to tranquil bird calls, gather riverside treasures, and discover serene fantasy worlds.
           </p>
+
+          <!-- Developer Support in About -->
+          <div style="background: #fdf6ec; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #ebd5b3; text-align: center;">
+            <p style="font-weight: 700; color: #854d0e; margin-bottom: 8px; font-size: 0.9rem;">💖 Dukung Pengembang:</p>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+              <button id="btn-about-qris" class="cozy-btn secondary donate-qris-btn" style="flex: 1; padding: 7px 10px; font-size: 0.82rem;">📱 QRIS</button>
+              <a href="https://paypal.me/hanafidesar" target="_blank" rel="noopener noreferrer" class="cozy-btn secondary donate-paypal-btn" style="flex: 1; padding: 7px 10px; font-size: 0.82rem; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px;">🅿️ PayPal</a>
+            </div>
+          </div>
+
           <button id="btn-close-about" class="cozy-btn">Close</button>
         </div>
 
@@ -260,9 +278,6 @@ export class UIManager {
             <button id="btn-toggle-mute" class="cozy-btn secondary" style="padding: 6px 14px; font-size: 0.85rem;">
               🔊 Sound On
             </button>
-            <button id="btn-fullscreen-settings" class="cozy-btn secondary" style="padding: 6px 14px; font-size: 0.85rem;">
-              ⛶ Fullscreen
-            </button>
             <button id="btn-reset-progress" class="cozy-btn danger" style="padding: 6px 14px; font-size: 0.85rem;">
               ↺ Reset
             </button>
@@ -280,7 +295,6 @@ export class UIManager {
           <div class="btn-stack" style="width: 100%;">
             <button id="btn-resume" class="cozy-btn">Resume Drift ⛵</button>
             <button id="btn-restart" class="cozy-btn secondary">Restart Level ↺</button>
-            <button id="btn-pause-how" class="cozy-btn secondary">How to Sail 📖</button>
             <button id="btn-pause-settings" class="cozy-btn secondary">Game Settings ⚙️</button>
             <button id="btn-pause-levels" class="cozy-btn secondary">River Map 🗺️</button>
           </div>
@@ -288,13 +302,13 @@ export class UIManager {
 
         <!-- 5. LEVEL COMPLETE CARD -->
         <div id="modal-card-level-complete" class="paper-card modal-card hidden" style="width: 380px;">
-          <h2 style="font-size: 1.7rem; color: #2b583f; margin-bottom: 2px;">Journey Completed! 🌸</h2>
+          <h2 style="font-size: 1.7rem; color: #2b583f; margin-bottom: 2px;">Journey Completed! 💎</h2>
           <p id="result-rating-title" style="color: #6c8c72; font-size: 0.95rem; font-family: 'Yomogi', cursive;">
             You arrived safely at the harbor
           </p>
           <div id="result-stars" class="result-stars">⭐⭐⭐</div>
-          <p id="result-score" style="font-weight: 700; color: #d97706; margin-bottom: 18px; font-size: 1.15rem;">
-            Treasures: 10 / 10
+          <p id="result-score" style="font-weight: 700; color: #dc2626; margin-bottom: 18px; font-size: 1.15rem;">
+            Red Gems: 10 / 10
           </p>
           <div class="btn-stack" style="width: 100%;">
             <button id="btn-next-level" class="cozy-btn">Next Journey ➔</button>
@@ -331,6 +345,24 @@ export class UIManager {
           </div>
           <button id="btn-close-install" class="cozy-btn secondary" style="width: 100%;">Close</button>
         </div>
+
+        <!-- 8. QRIS DONATION MODAL CARD -->
+        <div id="modal-card-qris" class="paper-card modal-card hidden" style="width: 360px; max-width: 92%; text-align: center;">
+          <h2 style="color: #2b583f; margin-bottom: 4px;">Dukung Pengembang 💖</h2>
+          <p style="font-size: 0.85rem; color: #5a7d66; margin-bottom: 12px;">Scan kode QRIS di bawah ini dengan aplikasi mobile banking atau e-wallet Anda.</p>
+          <div class="qris-img-container" style="background: #ffffff; padding: 10px; border-radius: 14px; border: 2px solid #d4c5ae; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 14px;">
+            <img src="qris-catbox.jpeg" alt="QRIS Catbox Donasi" style="width: 100%; max-width: 270px; height: auto; border-radius: 8px; display: block; margin: 0 auto;" />
+          </div>
+          <div class="btn-stack" style="width: 100%; gap: 8px;">
+            <a href="qris-catbox.jpeg" download="qris-catbox.jpeg" class="cozy-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <span>📥</span> Unduh QR Code
+            </a>
+            <a href="https://paypal.me/hanafidesar" target="_blank" rel="noopener noreferrer" class="cozy-btn secondary donate-paypal-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>🅿️</span> Buka PayPal (hanafidesar)
+            </a>
+            <button id="btn-close-qris" class="cozy-btn secondary" style="width: 100%;">Tutup</button>
+          </div>
+        </div>
       </div>
 
       <!-- Backward-compatible hidden portrait orientation element -->
@@ -351,8 +383,7 @@ export class UIManager {
     this.modalCardLevelComplete = document.getElementById('modal-card-level-complete')!;
     this.modalCardGameOver = document.getElementById('modal-card-game-over')!;
     this.modalCardInstall = document.getElementById('modal-card-install')!;
-    this.modalCardLevelComplete = document.getElementById('modal-card-level-complete')!;
-    this.modalCardGameOver = document.getElementById('modal-card-game-over')!;
+    this.modalCardQRIS = document.getElementById('modal-card-qris')!;
 
     // Grab HUD elements
     this.hudLevelTitle = document.getElementById('hud-title')!;
@@ -419,6 +450,9 @@ export class UIManager {
       case 'INSTALL':
         this.modalCardInstall.classList.remove('hidden');
         break;
+      case 'DONATE_QRIS':
+        this.modalCardQRIS.classList.remove('hidden');
+        break;
     }
 
     // 3. Unhide the single centralized modal backdrop
@@ -445,6 +479,7 @@ export class UIManager {
     this.modalCardLevelComplete.classList.add('hidden');
     this.modalCardGameOver.classList.add('hidden');
     this.modalCardInstall.classList.add('hidden');
+    this.modalCardQRIS.classList.add('hidden');
   }
 
   public getActiveModal(): ModalType {
@@ -647,6 +682,19 @@ export class UIManager {
     });
 
     clickWithAudio('btn-close-install', () => {
+      this.closeModal();
+    });
+
+    // Donations: QRIS Modal triggers & close
+    clickWithAudio('btn-donate-qris', () => {
+      this.openModal('DONATE_QRIS', 'MAIN_MENU');
+    });
+
+    clickWithAudio('btn-about-qris', () => {
+      this.openModal('DONATE_QRIS', 'MAIN_MENU');
+    });
+
+    clickWithAudio('btn-close-qris', () => {
       this.closeModal();
     });
 
@@ -857,16 +905,22 @@ export class UIManager {
     this.closeModal();
     this.updateMainMenuButtonText();
     this.mainMenuEl.classList.remove('hidden');
+    this.mainMenuEl.style.display = 'flex';
     this.levelSelectEl.classList.add('hidden');
+    this.levelSelectEl.style.display = 'none';
     this.hudEl.classList.add('hidden');
+    this.hudEl.style.display = 'none';
     if (notify && this.onBackToMenu) this.onBackToMenu();
   }
 
   public showLevelSelection(notify: boolean = true): void {
     this.closeModal();
     this.mainMenuEl.classList.add('hidden');
+    this.mainMenuEl.style.display = 'none';
     this.levelSelectEl.classList.remove('hidden');
+    this.levelSelectEl.style.display = 'flex';
     this.hudEl.classList.add('hidden');
+    this.hudEl.style.display = 'none';
     if (notify && this.onOpenLevelSelect) this.onOpenLevelSelect();
 
     // Populate 10-level illustrated river map
@@ -904,7 +958,7 @@ export class UIManager {
         <div class="realm-title">${cfg.title}</div>
         <div class="realm-subtitle">${cfg.subtitle}</div>
         <div class="realm-stars">${isUnlocked ? starDisplay : 'Locked'}</div>
-        <div class="realm-collectible">${isUnlocked ? `🌸 ${record.bestCollectibles} / ${cfg.collectibles.length}` : `Requires Level ${id - 1}`}</div>
+        <div class="realm-collectible">${isUnlocked ? `💎 ${record.bestCollectibles} / ${cfg.collectibles.length}` : `Requires Level ${id - 1}`}</div>
         <button class="realm-action-btn">
           ${isUnlocked ? (isCompleted ? 'Replay ↺' : 'Sail River ⛵') : 'Locked 🔒'}
         </button>
@@ -951,8 +1005,11 @@ export class UIManager {
 
   public showHUD(title: string, subtitle: string, totalCollectibles: number): void {
     this.mainMenuEl.classList.add('hidden');
+    this.mainMenuEl.style.display = 'none';
     this.levelSelectEl.classList.add('hidden');
+    this.levelSelectEl.style.display = 'none';
     this.hudEl.classList.remove('hidden');
+    this.hudEl.style.display = 'flex';
 
     this.hudLevelTitle.textContent = title;
     this.hudLevelSubtitle.textContent = subtitle;
@@ -977,6 +1034,7 @@ export class UIManager {
 
   public hideHUD(): void {
     this.hudEl.classList.add('hidden');
+    this.hudEl.style.display = 'none';
   }
 
   public updateIntegrity(current: number, max: number): void {
@@ -1006,7 +1064,7 @@ export class UIManager {
   }
 
   public updateCollectibles(collected: number, total: number): void {
-    this.hudCollectibleBadge.textContent = `🌸 ${collected} / ${total}`;
+    this.hudCollectibleBadge.textContent = `💎 ${collected} / ${total}`;
     this.hudCollectibleBadge.classList.add('bounce');
     setTimeout(() => {
       this.hudCollectibleBadge.classList.remove('bounce');
@@ -1027,12 +1085,12 @@ export class UIManager {
       starsStr += i <= stars ? '⭐' : '✩';
     }
     this.resultStarsEl.textContent = starsStr;
-    this.resultScoreEl.textContent = `Treasures: ${collected} / ${total}`;
+    this.resultScoreEl.textContent = `Red Gems: ${collected} / ${total}`;
 
     const ratingEl = document.getElementById('result-rating-title');
     if (ratingEl) {
       if (stars === 3) {
-        ratingEl.textContent = 'Master Explorer! Pristine journey 🌸';
+        ratingEl.textContent = 'Master Explorer! Pristine journey 💎';
       } else if (stars === 2) {
         ratingEl.textContent = 'Skilled Navigator! Beautiful drift 🍃';
       } else {

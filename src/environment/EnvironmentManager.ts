@@ -19,6 +19,13 @@ interface SwayingEntity {
   amplitude: number;
 }
 
+interface AnimatedPad {
+  entity: pc.Entity;
+  baseX: number;
+  baseZ: number;
+  phase: number;
+}
+
 interface ButterflyEntity {
   entity: pc.Entity;
   wingL: pc.Entity;
@@ -32,10 +39,11 @@ export class EnvironmentManager {
   private app: pc.AppBase;
   private river: RiverSystem;
   private rootEntity: pc.Entity;
-  private animatedPads: pc.Entity[] = [];
+  private animatedPads: AnimatedPad[] = [];
   private swayingFlora: SwayingEntity[] = [];
   private swayingTrees: SwayingEntity[] = [];
   private butterflies: ButterflyEntity[] = [];
+  private frameTick: number = 0;
 
   constructor(app: pc.AppBase, river: RiverSystem) {
     this.app = app;
@@ -201,15 +209,18 @@ export class EnvironmentManager {
       const side = rng() > 0.5 ? 1 : -1;
       const padDist = side * (halfW - 0.9 - rng() * 0.7);
 
+      const posX = frame.position.x + frame.normal.x * padDist;
+      const posZ = frame.position.z + frame.normal.z * padDist;
       const pad = NatureMeshes.createLilyPad(rng() > 0.5);
-      pad.setPosition(
-        frame.position.x + frame.normal.x * padDist,
-        frame.position.y + 0.02,
-        frame.position.z + frame.normal.z * padDist
-      );
+      pad.setPosition(posX, frame.position.y + 0.02, posZ);
       pad.setEulerAngles(0, rng() * 360, 0);
       this.rootEntity.addChild(pad);
-      this.animatedPads.push(pad);
+      this.animatedPads.push({
+        entity: pad,
+        baseX: posX,
+        baseZ: posZ,
+        phase: rng() * Math.PI * 2
+      });
     }
 
     // 5. WOODEN TIMBER BRIDGES SPANNING THE RIVER
@@ -322,26 +333,27 @@ export class EnvironmentManager {
 
   public update(dt: number): void {
     const now = Date.now() * 0.001;
+    this.frameTick++;
 
-    // 1. Floating bobbing for water lilies on river surface
+    // 1. Floating bobbing for water lilies on river surface (using cached coordinates)
     for (let i = 0; i < this.animatedPads.length; i++) {
       const pad = this.animatedPads[i];
-      const pos = pad.getPosition();
-      pad.setPosition(pos.x, 0.02 + Math.sin(now * 2.0 + i * 1.4) * 0.02, pos.z);
+      pad.entity.setPosition(pad.baseX, 0.02 + Math.sin(now * 2.0 + pad.phase) * 0.02, pad.baseZ);
     }
 
-    // 2. Gentle wind sway for wildflowers and grass tufts
-    for (let i = 0; i < this.swayingFlora.length; i++) {
-      const item = this.swayingFlora[i];
-      const swayAngle = Math.sin(now * 2.2 + item.phase) * item.amplitude;
-      item.entity.setEulerAngles(swayAngle, item.baseRotY, swayAngle * 0.5);
-    }
-
-    // 3. Subtle breathing sway for tree canopies
-    for (let j = 0; j < this.swayingTrees.length; j++) {
-      const tree = this.swayingTrees[j];
-      const sway = Math.sin(now * 1.3 + tree.phase) * tree.amplitude;
-      tree.entity.setEulerAngles(sway * 0.6, tree.baseRotY, sway);
+    // 2 & 3. Interleaved wind sway (flora on even ticks, trees on odd ticks: 50% less matrix dirtiness)
+    if (this.frameTick % 2 === 0) {
+      for (let i = 0; i < this.swayingFlora.length; i++) {
+        const item = this.swayingFlora[i];
+        const swayAngle = Math.sin(now * 2.2 + item.phase) * item.amplitude;
+        item.entity.setEulerAngles(swayAngle, item.baseRotY, swayAngle * 0.5);
+      }
+    } else {
+      for (let j = 0; j < this.swayingTrees.length; j++) {
+        const tree = this.swayingTrees[j];
+        const sway = Math.sin(now * 1.3 + tree.phase) * tree.amplitude;
+        tree.entity.setEulerAngles(sway * 0.6, tree.baseRotY, sway);
+      }
     }
 
     // 4. Butterfly fluttering animation & flight paths

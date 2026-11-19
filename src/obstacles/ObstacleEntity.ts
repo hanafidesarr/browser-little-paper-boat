@@ -36,6 +36,12 @@ export class ObstacleEntity {
   private animalTriggered: boolean = false;
   private fishJumpPhase: number = 0;
 
+  // Whirlpool vortex multi-tier entities
+  private whirlpoolCore: pc.Entity | null = null;
+  private whirlpoolMid: pc.Entity | null = null;
+  private whirlpoolOuter: pc.Entity | null = null;
+  private whirlpoolSpirals: pc.Entity | null = null;
+
   constructor(app: pc.AppBase, data: ObstacleData) {
     this.distance = data.distance;
     this.lateralOffset = data.lateralOffset;
@@ -280,27 +286,7 @@ export class ObstacleEntity {
       });
 
     } else if (this.type === 'whirlpool') {
-      // Swirling Cyan Eddy Vortex Rings
-      const swirlMat = new pc.StandardMaterial();
-      swirlMat.diffuse = new pc.Color(0.35, 0.85, 0.95);
-      swirlMat.opacity = 0.6;
-      swirlMat.blendType = pc.BLEND_ADDITIVE;
-      swirlMat.cull = pc.CULLFACE_NONE;
-      swirlMat.update();
-
-      const swirl1 = new pc.Entity('SwirlOuter');
-      swirl1.addComponent('render', { type: 'cylinder' });
-      swirl1.setLocalScale(this.radius * 1.8, 0.02, this.radius * 1.8);
-      swirl1.setLocalPosition(0, 0.02, 0);
-      if (swirl1.render?.meshInstances[0]) swirl1.render.meshInstances[0].material = swirlMat;
-      this.entity.addChild(swirl1);
-
-      const swirl2 = new pc.Entity('SwirlInner');
-      swirl2.addComponent('render', { type: 'cylinder' });
-      swirl2.setLocalScale(this.radius * 1.0, 0.03, this.radius * 1.0);
-      swirl2.setLocalPosition(0, 0.03, 0);
-      if (swirl2.render?.meshInstances[0]) swirl2.render.meshInstances[0].material = swirlMat;
-      this.entity.addChild(swirl2);
+      this.buildWhirlpoolVortex(device);
 
     } else if (this.type === 'waterfall_zone') {
       // Rapids Foaming Zone
@@ -397,7 +383,12 @@ export class ObstacleEntity {
       }
 
     } else if (this.type === 'whirlpool') {
-      this.entity.rotate(0, 160 * dt, 0);
+      // Differential multi-tier vortex rotation
+      if (this.whirlpoolCore) this.whirlpoolCore.rotate(0, 310 * dt, 0);
+      if (this.whirlpoolMid) this.whirlpoolMid.rotate(0, 210 * dt, 0);
+      if (this.whirlpoolSpirals) this.whirlpoolSpirals.rotate(0, 165 * dt, 0);
+      if (this.whirlpoolOuter) this.whirlpoolOuter.rotate(0, 85 * dt, 0);
+
       if (Math.random() < 0.12) {
         effects.spawnCurrentBubble(this.entity.getPosition());
       }
@@ -417,6 +408,149 @@ export class ObstacleEntity {
 
   public registerHit(): void {
     this.hitCooldown = 1.2;
+  }
+
+  /**
+   * Realistic river-matched aquatic vortex geometry with differential swirling rotation.
+   * Colors seamlessly match the river water tint with swirling vortex ribbons & funnel depth.
+   */
+  private buildWhirlpoolVortex(device: pc.GraphicsDevice): void {
+    // 1. Natural River Water Depth Funnel (Depression dipping into river depth, matched to river water)
+    const coreMat = new pc.StandardMaterial();
+    coreMat.diffuse = new pc.Color(0.44, 0.74, 0.82); // Matches deeper river water volume
+    coreMat.ambient = new pc.Color(0.32, 0.58, 0.68);
+    coreMat.emissive = new pc.Color(0.12, 0.32, 0.42);
+    coreMat.opacity = 0.75;
+    coreMat.blendType = pc.BLEND_NORMAL;
+    coreMat.cull = pc.CULLFACE_NONE;
+    coreMat.update();
+
+    this.whirlpoolCore = new pc.Entity('WhirlpoolCore');
+    this.whirlpoolCore.addComponent('render', { type: 'cone' });
+    this.whirlpoolCore.setLocalScale(this.radius * 0.85, 0.38, this.radius * 0.85);
+    // Invert cone so apex points down into water depth (-0.18m), wide base flush with river
+    this.whirlpoolCore.setLocalEulerAngles(180, 0, 0);
+    this.whirlpoolCore.setLocalPosition(0, -0.18, 0);
+    if (this.whirlpoolCore.render?.meshInstances[0]) {
+      this.whirlpoolCore.render.meshInstances[0].material = coreMat;
+    }
+    this.entity.addChild(this.whirlpoolCore);
+
+    // 2. Swirling Mid-Tier River Current Disc
+    const midMat = new pc.StandardMaterial();
+    midMat.diffuse = new pc.Color(0.50, 0.80, 0.88); // Natural river current
+    midMat.ambient = new pc.Color(0.35, 0.62, 0.70);
+    midMat.opacity = 0.60;
+    midMat.blendType = pc.BLEND_NORMAL;
+    midMat.cull = pc.CULLFACE_NONE;
+    midMat.update();
+
+    this.whirlpoolMid = new pc.Entity('WhirlpoolMid');
+    this.whirlpoolMid.addComponent('render', { type: 'cylinder' });
+    this.whirlpoolMid.setLocalScale(this.radius * 1.35, 0.02, this.radius * 1.35);
+    this.whirlpoolMid.setLocalPosition(0, -0.03, 0);
+    if (this.whirlpoolMid.render?.meshInstances[0]) {
+      this.whirlpoolMid.render.meshInstances[0].material = midMat;
+    }
+    this.entity.addChild(this.whirlpoolMid);
+
+    // 3. Swirling Outer River Surface Eddy (Blends flush with river water)
+    const outerMat = new pc.StandardMaterial();
+    outerMat.diffuse = new pc.Color(0.53, 0.82, 0.90); // Exact match with river water tint
+    outerMat.opacity = 0.45;
+    outerMat.blendType = pc.BLEND_NORMAL;
+    outerMat.cull = pc.CULLFACE_NONE;
+    outerMat.update();
+
+    this.whirlpoolOuter = new pc.Entity('WhirlpoolOuter');
+    this.whirlpoolOuter.addComponent('render', { type: 'cylinder' });
+    this.whirlpoolOuter.setLocalScale(this.radius * 2.05, 0.02, this.radius * 2.05);
+    this.whirlpoolOuter.setLocalPosition(0, 0.01, 0);
+    if (this.whirlpoolOuter.render?.meshInstances[0]) {
+      this.whirlpoolOuter.render.meshInstances[0].material = outerMat;
+    }
+    this.entity.addChild(this.whirlpoolOuter);
+
+    // 4. Procedural 3-Blade Logarithmic Spiral Bands (Swirling water foam current ribbons)
+    const spiralMesh = this.createSpiralVortexMesh(device, this.radius);
+    const spiralMat = new pc.StandardMaterial();
+    spiralMat.diffuse = new pc.Color(0.88, 0.96, 1.0); // Translucent river wave foam
+    spiralMat.emissive = new pc.Color(0.35, 0.65, 0.75);
+    spiralMat.opacity = 0.55;
+    spiralMat.blendType = pc.BLEND_NORMAL;
+    spiralMat.cull = pc.CULLFACE_NONE;
+    spiralMat.update();
+
+    this.whirlpoolSpirals = new pc.Entity('WhirlpoolSpirals');
+    this.whirlpoolSpirals.addComponent('render', {
+      meshInstances: [new pc.MeshInstance(spiralMesh, spiralMat)]
+    });
+    this.whirlpoolSpirals.setLocalPosition(0, 0.02, 0);
+    this.entity.addChild(this.whirlpoolSpirals);
+  }
+
+  /**
+   * Procedural logarithmic spiral mesh generating 3 curved curling arms that twist inward into the vortex core.
+   */
+  private createSpiralVortexMesh(device: pc.GraphicsDevice, radius: number): pc.Mesh {
+    const numArms = 3;
+    const steps = 14;
+    const positions: number[] = [];
+    const normals: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+    let vertexCounter = 0;
+
+    for (let a = 0; a < numArms; a++) {
+      const armOffset = (a / numArms) * Math.PI * 2;
+      const armStartIdx = vertexCounter;
+
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps; // 0 = outer rim, 1 = inner core
+        const r = radius * 1.85 * (1.0 - t) + 0.22 * t;
+        const angle = armOffset + t * 2.85; // logarithmic curl inward
+        const width = (radius * 0.24) * Math.sin(t * Math.PI) * 0.95 + 0.05 * (1.0 - t);
+        const y = 0.01 * (1.0 - t) - 0.08 * t;
+
+        const cx = Math.cos(angle) * r;
+        const cz = Math.sin(angle) * r;
+
+        // Normal perpendicular to radial ray in XZ plane
+        const px = -Math.sin(angle) * width;
+        const pz = Math.cos(angle) * width;
+
+        // Left ribbon edge
+        positions.push(cx - px, y, cz - pz);
+        normals.push(0, 1, 0);
+        uvs.push(0, t);
+        vertexCounter++;
+
+        // Right ribbon edge
+        positions.push(cx + px, y, cz + pz);
+        normals.push(0, 1, 0);
+        uvs.push(1, t);
+        vertexCounter++;
+
+        if (s < steps) {
+          const v0 = armStartIdx + s * 2;
+          const v1 = v0 + 1;
+          const v2 = v0 + 2;
+          const v3 = v0 + 3;
+
+          indices.push(v0, v1, v2);
+          indices.push(v1, v3, v2);
+        }
+      }
+    }
+
+    const mesh = new pc.Mesh(device);
+    mesh.clear(true, false);
+    mesh.setPositions(positions);
+    mesh.setNormals(normals);
+    mesh.setUvs(0, uvs);
+    mesh.setIndices(indices);
+    mesh.update(pc.PRIMITIVE_TRIANGLES);
+    return mesh;
   }
 
   public destroy(): void {

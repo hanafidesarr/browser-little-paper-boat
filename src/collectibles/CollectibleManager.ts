@@ -48,7 +48,7 @@ export class CollectibleManager {
         this.app.graphicsDevice,
         s.distance,
         s.lateralOffset,
-        s.type ?? 'golden_leaf'
+        s.type ?? 'red_gem'
       );
 
       const pos = this.river.riverToWorld(s.distance, s.lateralOffset, 0.38);
@@ -71,10 +71,12 @@ export class CollectibleManager {
         continue;
       }
 
+      // Distance culling: Skip far-off collectibles
+      const distDelta = Math.abs(item.distance - boatDist);
+      if (distDelta > 50) continue;
+
       item.update(dt, boatPos);
 
-      // Distance check along river coordinates
-      const distDelta = Math.abs(item.distance - boatDist);
       const latDelta = Math.abs(item.lateralOffset - boatLat);
 
       if (distDelta < pickupRadius && latDelta < pickupRadius) {

@@ -41,9 +41,12 @@ export class ObstacleManager {
     const boatLat = boat.getLateralOffset();
 
     for (const obs of this.obstacles) {
+      const dDist = Math.abs(obs.distance - boatDist);
+      // Distance culling: Skip processing off-screen obstacles > 55m away from player
+      if (dDist > 55) continue;
+
       obs.update(dt, boatDist, boatLat, this.river, this.effects, this.audio);
 
-      const dDist = Math.abs(obs.distance - boatDist);
       const dLat = Math.abs(obs.lateralOffset - boatLat);
 
       // ==========================================

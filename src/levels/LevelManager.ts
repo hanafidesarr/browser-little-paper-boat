@@ -113,8 +113,8 @@ export class LevelManager {
     this.islands.populate(config.islands, config.environment.bankTint);
     this.river.setIslands(this.islands.getIslands());
 
-    // 3. Reset Boat to start
-    this.boat.setPosition(2, 0);
+    // 3. Reset Boat to start (guaranteeing boat is visible, upright, and afloat)
+    this.boat.resetBoat(2, 0);
     this.boat.setBaseSpeed(config.baseSpeed);
 
     // 4. Populate Environment & Weather

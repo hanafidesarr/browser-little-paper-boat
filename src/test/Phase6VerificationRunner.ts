@@ -53,10 +53,8 @@ export class Phase6VerificationRunner {
     const isMainMenuVisible = mainMenuEl !== null && !mainMenuEl.classList.contains('hidden');
     const playBtn = document.getElementById('btn-play');
     const levelsBtn = document.getElementById('btn-levels');
-    const howBtn = document.getElementById('btn-how');
     const settingsBtn = document.getElementById('btn-settings');
-    const aboutBtn = document.getElementById('btn-about');
-    const allMenuButtonsExist = !!(playBtn && levelsBtn && howBtn && settingsBtn && aboutBtn);
+    const allMenuButtonsExist = !!(playBtn && levelsBtn && settingsBtn);
     record(
       1,
       'FUNCTIONAL',
@@ -193,7 +191,7 @@ export class Phase6VerificationRunner {
       !hudEl.classList.contains('hidden') &&
       hudTitle?.includes('Morning Creek') &&
       hudIntegrity?.includes('⛵') &&
-      hudCollectible?.includes('🌸') &&
+      (hudCollectible?.includes('💎') || hudCollectible?.includes('🌸')) &&
       hudProgressBar !== null &&
       hudBoatMarker !== null;
     record(

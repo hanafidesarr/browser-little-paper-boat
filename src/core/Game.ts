@@ -48,6 +48,13 @@ export class Game {
 
     this.app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
     this.app.setCanvasResolution(pc.RESOLUTION_AUTO);
+
+    // Mobile & Retina GPU Optimization: Cap fill rate pixel ratio to prevent high-DPI GPU throttling
+    const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+    const initialQuality = ProgressionManager.getGraphicsQuality();
+    const maxRatio = initialQuality === 'performance' ? 1.0 : (initialQuality === 'quality' ? Math.min(2.0, dpr) : Math.min(1.5, dpr));
+    (this.app.graphicsDevice as any).maxPixelRatio = maxRatio;
+
     this.app.start();
 
     window.addEventListener('resize', () => this.app.resizeCanvas());
@@ -186,6 +193,7 @@ export class Game {
       this.state = 'LEVEL_SELECTION';
       this.boat.setMovementEnabled(false);
       this.boat.setJoystickVisible(false);
+      this.ui.hideHUD();
       this.ui.showLevelSelection(false);
     };
 
@@ -193,12 +201,14 @@ export class Game {
       this.state = 'LEVEL_SELECTION';
       this.boat.setMovementEnabled(false);
       this.boat.setJoystickVisible(false);
+      this.ui.hideHUD();
     };
 
     this.ui.onBackToMenu = () => {
       this.state = 'MAIN_MENU';
       this.boat.setMovementEnabled(false);
       this.boat.setJoystickVisible(false);
+      this.ui.hideHUD();
     };
 
     this.ui.onNextLevel = () => {

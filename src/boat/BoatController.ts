@@ -35,6 +35,9 @@ export class BoatController {
   private currentIntegrity: number = 3;
   private invulnerabilityTimer: number = 0;
   private isSunk: boolean = false;
+  private isFullSinking: boolean = false;
+  private fullSinkProgress: number = 0;
+  private crashSinkTimer: number = 0;
   private movementEnabled: boolean = false;
 
   // Animation Timing
@@ -274,15 +277,63 @@ export class BoatController {
     this.animTimer += dt;
 
     if (this.isSunk) {
-      // Boat is softly waterlogged/sunk, waiting for respawn
+      // Boat has completely sunk, waiting for respawn
       return;
     }
 
-    // 0. Timers
+    if (this.isFullSinking) {
+      // Animate dramatic terminal sinking into river depth
+      this.fullSinkProgress += dt * 1.25;
+      const progress = Math.min(1.0, this.fullSinkProgress);
+
+      const sinkY = -progress * 1.6;
+      const sinkPitch = progress * 32;
+      const sinkRoll = progress * 24;
+      this.visualRoot.setLocalPosition(0, sinkY, 0);
+      this.visualRoot.setLocalEulerAngles(sinkPitch, this.externalSpinYaw, sinkRoll);
+
+      // Decelerating forward drift while going under
+      this.distance += this.currentForwardSpeed * 0.25 * dt;
+      this.updateLogicalNodePosition();
+
+      if (this.fullSinkProgress >= 1.0) {
+        this.isFullSinking = false;
+        this.isSunk = true;
+        this.visualRoot.enabled = false;
+        if (this.onBoatSink) {
+          this.onBoatSink();
+        }
+      }
+      return;
+    }
+
+    // 0. Timers & Blinking / Invulnerability Flashing
+    if (this.crashSinkTimer > 0) {
+      this.crashSinkTimer -= dt;
+      if (this.crashSinkTimer < 0) this.crashSinkTimer = 0;
+    }
+
     if (this.invulnerabilityTimer > 0) {
       this.invulnerabilityTimer -= dt;
-      // Stable solid boat rendering (no strobe flicker or glitch)
+      // Classic arcade blinking / invulnerability flicker (10 Hz)
+      const blinkVisible = (Math.floor(this.invulnerabilityTimer * 12) % 2) === 0;
+      this.visualRoot.enabled = blinkVisible;
+      if (this.rippleEntity) {
+        this.rippleEntity.enabled = blinkVisible;
+      }
+
+      if (this.invulnerabilityTimer <= 0) {
+        this.invulnerabilityTimer = 0;
+        this.visualRoot.enabled = true;
+        if (this.rippleEntity) {
+          this.rippleEntity.enabled = true;
+        }
+      }
+    } else {
       this.visualRoot.enabled = true;
+      if (this.rippleEntity) {
+        this.rippleEntity.enabled = true;
+      }
     }
 
     if (this.speedModifierTimer > 0) {
@@ -469,19 +520,32 @@ export class BoatController {
     // ==========================================
     // VISUAL ANIMATION CHILD (Separated from physics)
     // ==========================================
-    // 1. Water buoyancy vertical oscillation
-    const bob = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_BOB_FREQ) * GameConfig.BOAT.FLOAT_BOB_AMP;
-    this.visualRoot.setLocalPosition(0, bob, 0);
+    // 1. Water buoyancy vertical oscillation + Crash Sink & Resurface Dip
+    let sinkOffset = 0;
+    let crashPitch = 0;
+    let crashRoll = 0;
 
-    // 2. Dynamic Banking roll into turns + wave rocking (pitch & roll) + spin
+    if (this.crashSinkTimer > 0) {
+      const crashDuration = 0.75;
+      const crashT = 1.0 - (this.crashSinkTimer / crashDuration); // 0 to 1
+      const dipFactor = Math.sin(crashT * Math.PI); // smooth arc (peaks at 0.5)
+      sinkOffset = -dipFactor * 0.65; // dips 0.65m into water and smoothly resurfaces
+      crashPitch = dipFactor * 22;    // bow tilts down into water
+      crashRoll = Math.sin(crashT * Math.PI * 4) * (1.0 - crashT) * 14; // water impact tremor
+    }
+
+    const bob = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_BOB_FREQ) * GameConfig.BOAT.FLOAT_BOB_AMP;
+    this.visualRoot.setLocalPosition(0, bob + sinkOffset, 0);
+
+    // 2. Dynamic Banking roll into turns + wave rocking (pitch & roll) + crash dynamics + spin
     const bankAngle = -(this.lateralVelocity / GameConfig.BOAT.STEER_SPEED) * GameConfig.BOAT.BANK_ANGLE_MAX;
     const waveRoll = Math.sin(this.animTimer * GameConfig.BOAT.FLOAT_ROLL_FREQ) * GameConfig.BOAT.FLOAT_ROLL_AMP;
     const wavePitch = Math.cos(this.animTimer * GameConfig.BOAT.FLOAT_PITCH_FREQ) * GameConfig.BOAT.FLOAT_PITCH_AMP;
 
     this.visualRoot.setLocalEulerAngles(
-      wavePitch,
+      wavePitch + crashPitch,
       this.externalSpinYaw,
-      bankAngle + waveRoll
+      bankAngle + waveRoll + crashRoll
     );
 
     // 3. Water wake ripple ring pulse
@@ -489,6 +553,16 @@ export class BoatController {
       const pulse = 1.0 + Math.sin(this.animTimer * 4.2) * 0.12;
       this.rippleEntity.setLocalScale(1.8 * pulse, 1.0, 2.5 * pulse);
     }
+  }
+
+  private updateLogicalNodePosition(): void {
+    const frame = this.river.getFrameAtDistance(this.distance);
+    const logicalPos = new pc.Vec3(
+      frame.position.x + frame.normal.x * this.lateralOffset,
+      frame.position.y,
+      frame.position.z + frame.normal.z * this.lateralOffset
+    );
+    this.logicalNode.setPosition(logicalPos);
   }
 
   // ==========================================
@@ -501,6 +575,11 @@ export class BoatController {
 
   public clearInvulnerability(): void {
     this.invulnerabilityTimer = 0;
+    this.crashSinkTimer = 0;
+    this.visualRoot.enabled = true;
+    if (this.rippleEntity) {
+      this.rippleEntity.enabled = true;
+    }
   }
 
   public isInvulnerable(): boolean {
@@ -508,16 +587,17 @@ export class BoatController {
   }
 
   public takeDamage(amount: number = 1): boolean {
-    if (this.invulnerabilityTimer > 0 || this.isSunk) {
+    if (this.invulnerabilityTimer > 0 || this.isSunk || this.isFullSinking) {
       return false; // Safely protected by invulnerability frames
     }
 
     this.currentIntegrity = Math.max(0, this.currentIntegrity - amount);
-    this.invulnerabilityTimer = 1.4; // 1.4s forgiving cooldown
+    this.invulnerabilityTimer = 2.4; // 2.4s invulnerability cooldown with blinking!
+    this.crashSinkTimer = 0.75;      // 0.75s crash sink dip into water & resurface!
 
     // Momentary deceleration
-    this.speedModifier = 0.65;
-    this.speedModifierTimer = 0.6;
+    this.speedModifier = 0.45;
+    this.speedModifierTimer = 0.75;
 
     // Soft jiggle tremor
     this.visualRoot.setLocalEulerAngles(6, 0, -8);
@@ -527,7 +607,8 @@ export class BoatController {
     }
 
     if (this.currentIntegrity <= 0) {
-      this.handleBoatSink();
+      this.isFullSinking = true;
+      this.fullSinkProgress = 0;
     }
 
     return true;
@@ -541,19 +622,52 @@ export class BoatController {
   }
 
   private handleBoatSink(): void {
-    this.isSunk = true;
-    this.visualRoot.enabled = false;
-
-    if (this.onBoatSink) {
-      this.onBoatSink();
-    }
+    this.isFullSinking = true;
+    this.fullSinkProgress = 0;
   }
 
   public respawnAt(distance: number, lateral: number = 0): void {
     this.isSunk = false;
+    this.isFullSinking = false;
+    this.fullSinkProgress = 0;
+    this.crashSinkTimer = 0;
     this.currentIntegrity = this.maxIntegrity;
-    this.invulnerabilityTimer = 2.0; // Extra grace period on respawn
+    this.invulnerabilityTimer = 2.4; // Reappears blinking with invulnerability grace period!
     this.visualRoot.enabled = true;
+    this.visualRoot.setLocalPosition(0, 0, 0);
+    this.visualRoot.setLocalEulerAngles(0, 0, 0);
+    if (this.rippleEntity) {
+      this.rippleEntity.enabled = true;
+    }
+    this.setPosition(distance, lateral);
+
+    if (this.onIntegrityChange) {
+      this.onIntegrityChange(this.currentIntegrity, this.maxIntegrity);
+    }
+  }
+
+  /**
+   * Complete clean reset for level restart or new level launch.
+   * Guarantees the boat is afloat, visible, full health, with zero leftover sinking states.
+   */
+  public resetBoat(distance: number = 2, lateral: number = 0): void {
+    this.isSunk = false;
+    this.isFullSinking = false;
+    this.fullSinkProgress = 0;
+    this.crashSinkTimer = 0;
+    this.invulnerabilityTimer = 0;
+    this.currentIntegrity = this.maxIntegrity;
+    this.externalSpinTorque = 0;
+    this.externalSpinYaw = 0;
+    this.speedModifier = 1.0;
+    this.speedModifierTimer = 0;
+    this.lateralVelocity = 0;
+    this.visualRoot.enabled = true;
+    this.visualRoot.setLocalPosition(0, 0, 0);
+    this.visualRoot.setLocalEulerAngles(0, 0, 0);
+    if (this.rippleEntity) {
+      this.rippleEntity.enabled = true;
+    }
     this.setPosition(distance, lateral);
 
     if (this.onIntegrityChange) {

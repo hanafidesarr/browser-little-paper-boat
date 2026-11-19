@@ -40,11 +40,11 @@ export class AcceptanceTestRunner {
     assert(joystick !== null && (joystick.style.display === 'none' || !boat.isMovementEnabled()), '1. Joystick is not active on launch');
 
     // ----------------------------------------------------
-    // Scenario 2: Open and close tutorial from menu
+    // Scenario 2: Open and close tutorial modal
     // ----------------------------------------------------
-    document.getElementById('btn-how')?.click();
+    ui.openModal('TUTORIAL');
     await new Promise(r => setTimeout(r, 50));
-    assert(ui.getActiveModal() === 'TUTORIAL', '2. Tutorial modal is active after clicking How to Sail');
+    assert(ui.getActiveModal() === 'TUTORIAL', '2. Tutorial modal is active');
     const tutorialCard = document.getElementById('modal-card-tutorial');
     const aboutCard = document.getElementById('modal-card-about');
     assert(!tutorialCard?.classList.contains('hidden'), '2. Tutorial card is visible');

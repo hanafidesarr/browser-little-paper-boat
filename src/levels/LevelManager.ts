@@ -9,6 +9,7 @@ import { CheckpointManager } from '../checkpoints/CheckpointManager';
 import { EffectManager } from '../particles/EffectManager';
 import { AudioManager } from '../audio/AudioManager';
 import { FinishGate } from '../environment/FinishGate';
+import { IslandManager } from '../environment/IslandManager';
 import { WaterMaterial } from '../water/WaterMaterial';
 import { RiverMeshBuilder } from '../river/RiverMeshBuilder';
 import { LEVEL_DATA } from './LevelData';
@@ -23,6 +24,7 @@ export class LevelManager {
   private obstacles: ObstacleManager;
   private collectibles: CollectibleManager;
   private checkpoints: CheckpointManager;
+  private islands: IslandManager;
   private effects: EffectManager;
   private audio: AudioManager;
 
@@ -60,6 +62,7 @@ export class LevelManager {
     this.obstacles = obstacles;
     this.collectibles = collectibles;
     this.checkpoints = checkpoints;
+    this.islands = new IslandManager(this.app, this.river);
     this.effects = effects;
     this.audio = audio;
     this.sunLight = sunLight;
@@ -105,6 +108,10 @@ export class LevelManager {
       bankHeight: 3.0,
       bedDepth: 1.15
     });
+
+    // 2B. Build River Islands (daratan yang membelah jalur air menjadi 2)
+    this.islands.populate(config.islands, config.environment.bankTint);
+    this.river.setIslands(this.islands.getIslands());
 
     // 3. Reset Boat to start
     this.boat.setPosition(2, 0);
@@ -195,5 +202,9 @@ export class LevelManager {
 
   public getCurrentLevelId(): number {
     return this.currentLevelId;
+  }
+
+  public getIslandManager(): IslandManager {
+    return this.islands;
   }
 }

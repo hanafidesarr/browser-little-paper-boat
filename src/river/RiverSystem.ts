@@ -2,12 +2,14 @@ import * as pc from 'playcanvas';
 import { CatmullRomSpline } from '../spline/CatmullRomSpline';
 import { SplineControlPoint, RiverFrame } from '../spline/RiverFrame';
 import { RiverMeshBuilder, RiverMeshOptions, RiverMeshResult } from './RiverMeshBuilder';
+import { IslandEntity } from '../environment/IslandEntity';
 
 export class RiverSystem {
   private app: pc.AppBase;
   private spline: CatmullRomSpline;
   private riverResult: RiverMeshResult | null = null;
   private rootEntity: pc.Entity;
+  private islands: IslandEntity[] = [];
 
   constructor(app: pc.AppBase) {
     this.app = app;
@@ -91,12 +93,40 @@ export class RiverSystem {
     return this.riverResult;
   }
 
+  public setIslands(islands: IslandEntity[]): void {
+    this.islands = islands;
+  }
+
+  public getIslands(): IslandEntity[] {
+    return this.islands;
+  }
+
+  public getIslandAt(distance: number): IslandEntity | null {
+    for (const isl of this.islands) {
+      if (distance >= isl.getStartDistance() && distance <= isl.getEndDistance()) {
+        return isl;
+      }
+    }
+    return null;
+  }
+
+  public getUpcomingIsland(distance: number, lookahead: number = 8.0): IslandEntity | null {
+    for (const isl of this.islands) {
+      const start = isl.getStartDistance();
+      if (distance < start && distance >= start - lookahead) {
+        return isl;
+      }
+    }
+    return null;
+  }
+
   public clear(): void {
     if (this.riverResult) {
       this.riverResult.waterEntity.destroy();
       this.riverResult.banksEntity.destroy();
       this.riverResult = null;
     }
+    this.islands = [];
   }
 
   private waveTimer: number = 0;

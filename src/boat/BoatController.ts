@@ -329,11 +329,22 @@ export class BoatController {
     const targetAccel = steerInput * GameConfig.BOAT.STEER_ACCEL;
     this.lateralVelocity += targetAccel * dt;
 
+    // Upstream Island Bifurcation Current (gentle natural water split current near island tip)
+    const upcomingIsland = this.river.getUpcomingIsland(this.distance, 7.5);
+    if (upcomingIsland) {
+      const approachDist = this.distance - (upcomingIsland.getStartDistance() - 7.5);
+      const approachT = approachDist / 7.5;
+      if (Math.abs(this.lateralOffset) < 1.4) {
+        const deflectDir = this.lateralOffset >= 0 ? 1 : -1;
+        this.lateralVelocity += deflectDir * (1.8 + approachT * 2.4) * dt;
+      }
+    }
+
     // Damping / drag
     this.lateralVelocity -= this.lateralVelocity * GameConfig.BOAT.STEER_DAMPING * dt;
     this.lateralOffset += this.lateralVelocity * dt;
 
-    // 4. Collision-ready river boundaries & soft rebound
+    // 4. Collision-ready river boundaries & island fork channel split
     const maxHalfWidth = (frame.width * 0.5) - GameConfig.BOAT.SAFETY_MARGIN;
     this.isAtBoundary = false;
 
@@ -341,21 +352,74 @@ export class BoatController {
       this.bankBounceCooldown -= dt;
     }
 
-    if (this.lateralOffset < -maxHalfWidth) {
-      this.lateralOffset = -maxHalfWidth;
-      this.isAtBoundary = true;
-      if (this.lateralVelocity < 0) {
-        const impactVel = Math.abs(this.lateralVelocity);
-        this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
-        this.triggerBankBump('left', impactVel);
+    const currentIsland = this.river.getIslandAt(this.distance);
+    const islandHalfW = currentIsland ? currentIsland.getHalfWidthAt(this.distance) : 0;
+
+    if (islandHalfW > 0.35) {
+      // Landmass divides the river into 2 distinct channels (Left & Right)!
+      const islandMargin = GameConfig.BOAT.SAFETY_MARGIN;
+
+      if (this.lateralOffset < 0) {
+        // --- LEFT CHANNEL ---
+        const innerBound = -islandHalfW - islandMargin;
+        if (this.lateralOffset < -maxHalfWidth) {
+          this.lateralOffset = -maxHalfWidth;
+          this.isAtBoundary = true;
+          if (this.lateralVelocity < 0) {
+            const impactVel = Math.abs(this.lateralVelocity);
+            this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
+            this.triggerBankBump('left', impactVel);
+          }
+        } else if (this.lateralOffset > innerBound) {
+          // Hit the left bank of the island
+          this.lateralOffset = innerBound;
+          this.isAtBoundary = true;
+          if (this.lateralVelocity > 0) {
+            const impactVel = Math.abs(this.lateralVelocity);
+            this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
+            this.triggerBankBump('right', impactVel);
+          }
+        }
+      } else {
+        // --- RIGHT CHANNEL ---
+        const innerBound = islandHalfW + islandMargin;
+        if (this.lateralOffset > maxHalfWidth) {
+          this.lateralOffset = maxHalfWidth;
+          this.isAtBoundary = true;
+          if (this.lateralVelocity > 0) {
+            const impactVel = Math.abs(this.lateralVelocity);
+            this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
+            this.triggerBankBump('right', impactVel);
+          }
+        } else if (this.lateralOffset < innerBound) {
+          // Hit the right bank of the island
+          this.lateralOffset = innerBound;
+          this.isAtBoundary = true;
+          if (this.lateralVelocity < 0) {
+            const impactVel = Math.abs(this.lateralVelocity);
+            this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
+            this.triggerBankBump('left', impactVel);
+          }
+        }
       }
-    } else if (this.lateralOffset > maxHalfWidth) {
-      this.lateralOffset = maxHalfWidth;
-      this.isAtBoundary = true;
-      if (this.lateralVelocity > 0) {
-        const impactVel = Math.abs(this.lateralVelocity);
-        this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
-        this.triggerBankBump('right', impactVel);
+    } else {
+      // Standard single continuous channel
+      if (this.lateralOffset < -maxHalfWidth) {
+        this.lateralOffset = -maxHalfWidth;
+        this.isAtBoundary = true;
+        if (this.lateralVelocity < 0) {
+          const impactVel = Math.abs(this.lateralVelocity);
+          this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
+          this.triggerBankBump('left', impactVel);
+        }
+      } else if (this.lateralOffset > maxHalfWidth) {
+        this.lateralOffset = maxHalfWidth;
+        this.isAtBoundary = true;
+        if (this.lateralVelocity > 0) {
+          const impactVel = Math.abs(this.lateralVelocity);
+          this.lateralVelocity = -this.lateralVelocity * GameConfig.BOAT.BOUNCE_DAMPING;
+          this.triggerBankBump('right', impactVel);
+        }
       }
     }
 

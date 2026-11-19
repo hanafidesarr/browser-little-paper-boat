@@ -3,6 +3,7 @@ import { SplinePoint } from '../spline/CatmullRomSpline';
 import { ObstacleData } from '../obstacles/ObstacleEntity';
 import { CollectibleSpawn } from '../collectibles/CollectibleManager';
 import { WeatherType } from '../environment/WeatherEffects';
+import { IslandConfig } from '../environment/IslandEntity';
 
 export interface LevelConfig {
   id: number;
@@ -13,6 +14,7 @@ export interface LevelConfig {
   obstacles: ObstacleData[];
   collectibles: CollectibleSpawn[];
   bridgeDistances?: number[];
+  islands?: IslandConfig[];
   baseSpeed: number;
   audioTheme?: 'morning' | 'garden' | 'forest' | 'rain' | 'autumn' | 'twilight' | 'rapids';
   environment: {

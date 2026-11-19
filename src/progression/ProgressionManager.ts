@@ -1,4 +1,7 @@
+import { Language } from '../localization/Translations';
+
 export type GraphicsQuality = 'performance' | 'balanced' | 'quality';
+export type { Language };
 
 export interface LevelRecord {
   unlocked: boolean;
@@ -15,6 +18,8 @@ export interface PlayerData {
   sfxVolume: number;
   tutorialSeen: boolean;
   graphicsQuality?: GraphicsQuality;
+  language?: Language;
+  hasChosenLanguage?: boolean;
 }
 
 export class ProgressionManager {
@@ -157,6 +162,20 @@ export class ProgressionManager {
 
   public static setGraphicsQuality(quality: GraphicsQuality): void {
     this.data.graphicsQuality = quality;
+    this.save();
+  }
+
+  public static getLanguage(): Language {
+    return this.data.language || 'id';
+  }
+
+  public static hasChosenLanguage(): boolean {
+    return !!this.data.hasChosenLanguage;
+  }
+
+  public static setLanguage(lang: Language): void {
+    this.data.language = lang;
+    this.data.hasChosenLanguage = true;
     this.save();
   }
 

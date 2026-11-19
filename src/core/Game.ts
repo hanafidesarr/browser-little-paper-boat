@@ -12,6 +12,7 @@ import { LevelManager } from '../levels/LevelManager';
 import { ProgressionManager } from '../progression/ProgressionManager';
 import { AudioManager } from '../audio/AudioManager';
 import { UIManager, GameState, ModalType } from '../ui/UIManager';
+import { getLocalizedLevel } from '../localization/Translations';
 
 export class Game {
   private app: pc.AppBase;
@@ -125,6 +126,11 @@ export class Game {
     this.boat.setMovementEnabled(false);
     this.boat.setJoystickVisible(false);
     this.ui.showMainMenu();
+
+    // Check if first-time language selection is needed
+    if (!ProgressionManager.hasChosenLanguage()) {
+      this.ui.openModal('LANGUAGE_SELECT', 'MAIN_MENU');
+    }
   }
 
   private setupInteractions(): void {
@@ -153,7 +159,7 @@ export class Game {
 
     // Checkpoint crossed
     this.checkpoints.onCheckpointReached = () => {
-      this.ui.showCheckpointBanner('🏮 Lantern Checkpoint Reached');
+      this.ui.showCheckpointBanner();
     };
 
     // Level finished
@@ -232,7 +238,7 @@ export class Game {
         this.boat.setJoystickVisible(false);
         this.boat.setMovementEnabled(false);
       } else {
-        if (modal === 'PAUSE' && this.state === 'PAUSED') {
+        if ((modal === 'PAUSE' || modal === 'SETTINGS') && (this.state === 'PAUSED' || this.ui.isHUDVisible())) {
           this.state = 'PLAYING';
         }
         if (this.state === 'PLAYING') {
@@ -240,6 +246,7 @@ export class Game {
           this.boat.setJoystickVisible(true);
         } else {
           this.boat.setJoystickVisible(false);
+          this.boat.setMovementEnabled(false);
         }
       }
     };
@@ -269,9 +276,11 @@ export class Game {
     this.camera.reset();
 
     const cfg = this.levelManager.getCurrentConfig();
+    const lang = ProgressionManager.getLanguage();
+    const loc = getLocalizedLevel(cfg.id, lang);
     this.ui.showHUD(
-      `Level 0${cfg.id}`.slice(-8) + ` — ${cfg.title}`,
-      cfg.subtitle,
+      `Level 0${cfg.id}`.slice(-8) + ` — ${loc.title}`,
+      loc.subtitle,
       cfg.collectibles.length
     );
     this.ui.updateIntegrity(this.boat.maxIntegrity, this.boat.maxIntegrity);

@@ -1,6 +1,7 @@
 import { ProgressionManager } from '../progression/ProgressionManager';
 import { AudioManager } from '../audio/AudioManager';
 import { LEVEL_DATA } from '../levels/LevelData';
+import { Language, UI_TRANSLATIONS, getLocalizedLevel } from '../localization/Translations';
 
 export type GameState =
   | 'MAIN_MENU'
@@ -20,7 +21,8 @@ export type ModalType =
   | 'LEVEL_COMPLETE'
   | 'GAME_OVER'
   | 'INSTALL'
-  | 'DONATE_QRIS';
+  | 'DONATE_QRIS'
+  | 'LANGUAGE_SELECT';
 
 const REALM_ICONS: { [id: number]: string } = {
   1: '🌿',
@@ -54,6 +56,7 @@ export class UIManager {
   private modalCardGameOver!: HTMLElement;
   private modalCardInstall!: HTMLElement;
   private modalCardQRIS!: HTMLElement;
+  private modalCardLanguage!: HTMLElement;
   private deferredInstallPrompt: any = null;
 
   // Active state tracking
@@ -107,25 +110,57 @@ export class UIManager {
         <div class="paper-card" style="max-width: 440px;">
           <!-- Studio / Game Brand Logo with background removed -->
           <div class="menu-logo-container">
-            <img src="logo-catbox-transparent.png" alt="Little Paper Boat Logo" class="menu-logo-img" />
+            <img src="logo-catbox.png" alt="Little Paper Boat Logo" class="menu-logo-img" />
           </div>
-          <h1 class="game-title">Little Paper Boat</h1>
-          <p class="game-tagline">"A little boat. A wonderful journey."</p>
+          <h1 id="game-title" class="game-title">Little Paper Boat</h1>
+          <p id="game-tagline" class="game-tagline">"A little boat. A wonderful journey."</p>
           <div class="btn-stack">
             <button id="btn-play" class="cozy-btn">Start Journey</button>
             <button id="btn-levels" class="cozy-btn secondary">River Map 🗺️</button>
             <button id="btn-settings" class="cozy-btn secondary">Game Settings ⚙️</button>
+
             <!-- Support & Donations -->
-            <div class="donation-btn-group" style="display: flex; gap: 8px; width: 100%; margin-top: 4px;">
-              <button id="btn-donate-qris" class="cozy-btn secondary donate-qris-btn" style="flex: 1; padding: 9px 10px; font-size: 0.85rem;" title="Donasi via QRIS">
-                📱 QRIS Donasi
-              </button>
-              <a href="https://paypal.me/hanafidesar" target="_blank" rel="noopener noreferrer" class="cozy-btn secondary donate-paypal-btn" style="flex: 1; padding: 9px 10px; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px;" title="Dukung lewat PayPal (hanafidesar)">
-                🅿️ PayPal Me
+            <div class="donation-container" style="width: 100%; margin-top: 6px;">
+              <div id="lbl-donate-title" style="font-size: 0.82rem; font-weight: 700; color: #2e6040; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">
+                Donate
+              </div>
+              <div class="donation-btn-group" style="display: flex; gap: 8px; width: 100%;">
+                <button id="btn-donate-qris" class="cozy-btn secondary donate-qris-btn" style="flex: 1; padding: 8px 10px; font-size: 0.85rem;" title="Donasi via QRIS">
+                  📱 QRIS
+                </button>
+                <a id="btn-donate-paypal" href="https://paypal.me/hanafidesar" target="_blank" rel="noopener noreferrer" class="cozy-btn secondary donate-paypal-btn" style="flex: 1; padding: 8px 10px; font-size: 0.85rem; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px;" title="PayPal (hanafidesar)">
+                  🅿️ PayPal
+                </a>
+              </div>
+            </div>
+
+            <!-- Studio Links: Instagram & Website -->
+            <div class="studio-links" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px; font-size: 0.82rem;">
+              <a href="https://instagram.com/catbox.studios" target="_blank" rel="noopener noreferrer" style="color: #2e6040; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; opacity: 0.9; transition: opacity 0.2s;" title="Instagram @catbox.studios">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; flex-shrink: 0; border-radius: 4px;">
+                  <defs>
+                    <linearGradient id="ig-grad-main" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#fdf497" />
+                      <stop offset="5%" stop-color="#fdf497" />
+                      <stop offset="45%" stop-color="#fd5949" />
+                      <stop offset="60%" stop-color="#d6249f" />
+                      <stop offset="90%" stop-color="#285AEB" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="2" y="2" width="20" height="20" rx="5.5" fill="url(#ig-grad-main)" />
+                  <rect x="5.5" y="5.5" width="13" height="13" rx="3.5" stroke="#ffffff" stroke-width="1.8" />
+                  <circle cx="12" cy="12" r="3.2" stroke="#ffffff" stroke-width="1.8" />
+                  <circle cx="16.3" cy="7.7" r="0.85" fill="#ffffff" />
+                </svg>
+                <span>catbox.studios</span>
+              </a>
+              <span style="color: #9cb8a5; font-size: 0.75rem;">•</span>
+              <a href="https://catbox.axeonsoft.com/" target="_blank" rel="noopener noreferrer" style="color: #2e6040; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; opacity: 0.9; transition: opacity 0.2s;" title="Website Catbox Studios">
+                <span>🌐</span> catbox.axeonsoft.com
               </a>
             </div>
           </div>
-          <p style="margin-top: 18px; font-size: 0.75rem; color: #769380; font-family: 'Yomogi', cursive;">
+          <p id="txt-menu-footer" style="margin-top: 14px; font-size: 0.75rem; color: #769380; font-family: 'Yomogi', cursive;">
             A cozy 3D browser adventure • Powered by PlayCanvas
           </p>
         </div>
@@ -140,8 +175,8 @@ export class UIManager {
               ◀ Menu
             </button>
             <div class="map-title-block">
-              <h2 class="map-title">River Journeys 🗺️</h2>
-              <span class="map-subtitle">Follow the gentle currents through 10 tranquil realms</span>
+              <h2 id="map-title" class="map-title">River Journeys 🗺️</h2>
+              <span id="map-subtitle" class="map-subtitle">Follow the gentle currents through 10 tranquil realms</span>
             </div>
             <div class="map-stats-pill">
               <span>⭐ <strong id="map-total-stars">0</strong>/30</span>
@@ -149,11 +184,9 @@ export class UIManager {
             </div>
           </div>
 
-          <!-- MAP SCROLL VIEWPORT -->
-          <div id="map-scroll-viewport" class="map-scroll-viewport">
-            <button id="btn-map-left" class="map-nav-arrow left" title="Scroll Left">◀</button>
-            <button id="btn-map-right" class="map-nav-arrow right" title="Scroll Right">▶</button>
-            <div id="level-grid-container" class="map-river-track"></div>
+          <!-- MAP CARDS VIEWPORT (RESPONSIVE CARD GRID, NO HORIZONTAL SCROLL) -->
+          <div id="map-scroll-viewport" class="map-card-viewport">
+            <div id="level-grid-container" class="map-card-grid"></div>
           </div>
         </div>
       </div>
@@ -183,27 +216,43 @@ export class UIManager {
 
       <!-- SINGLE CENTRALIZED MODAL LAYER -->
       <div id="modal-layer" class="modal-layer hidden">
+        <!-- 0. FIRST-TIME LANGUAGE SELECTION MODAL -->
+        <div id="modal-card-language" class="paper-card modal-card hidden" style="max-width: 420px; text-align: center;">
+          <h2 id="txt-lang-title" style="color: #2b583f; margin-bottom: 8px; font-size: 1.5rem;">Choose Language / Pilih Bahasa ⛵</h2>
+          <p id="txt-lang-desc" style="font-size: 0.92rem; color: #5a7d66; margin-bottom: 20px; line-height: 1.5;">
+            Select your preferred language to begin your journey:<br>Silakan pilih bahasa yang ingin digunakan:
+          </p>
+          <div class="btn-stack" style="width: 100%; gap: 12px;">
+            <button id="btn-choose-id" class="cozy-btn" style="padding: 12px 16px; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+              🇮🇩 Bahasa Indonesia
+            </button>
+            <button id="btn-choose-en" class="cozy-btn secondary" style="padding: 12px 16px; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; gap: 10px;">
+              🇬🇧 English
+            </button>
+          </div>
+        </div>
+
         <!-- 1. TUTORIAL / HOW TO SAIL CARD -->
         <div id="modal-card-tutorial" class="paper-card modal-card hidden" style="max-width: 500px; text-align: left;">
-          <h2 style="color: #2b583f; margin-bottom: 14px; text-align: center; font-size: 1.6rem;">How to Sail ⛵</h2>
+          <h2 id="txt-tutorial-title" style="color: #2b583f; margin-bottom: 14px; text-align: center; font-size: 1.6rem;">How to Sail ⛵</h2>
           <div style="background: rgba(238, 247, 241, 0.7); border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;">
-            <p style="margin-bottom: 8px; font-weight: 700; color: #2e6040;">⌨️ Desktop Keyboard:</p>
-            <p style="font-size: 0.9rem; line-height: 1.5; color: #3b5b48;">
+            <p id="txt-tutorial-kb-hdr" style="margin-bottom: 8px; font-weight: 700; color: #2e6040;">⌨️ Desktop Keyboard:</p>
+            <p id="txt-tutorial-kb-desc" style="font-size: 0.9rem; line-height: 1.5; color: #3b5b48;">
               • Steer: <code>A</code> / <code>D</code> or <code>←</code> / <code>→</code><br>
               • Speed: <code>W</code> / <code>↑</code> Surge forward • <code>S</code> / <code>↓</code> Gentle brake<br>
               • Pause: <code>P</code> or <code>Escape</code>
             </p>
           </div>
           <div style="background: rgba(238, 247, 241, 0.7); border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;">
-            <p style="margin-bottom: 8px; font-weight: 700; color: #2e6040;">🖱️ Mouse & 📱 Touch:</p>
-            <p style="font-size: 0.9rem; line-height: 1.5; color: #3b5b48;">
+            <p id="txt-tutorial-touch-hdr" style="margin-bottom: 8px; font-weight: 700; color: #2e6040;">🖱️ Mouse & 📱 Touch:</p>
+            <p id="txt-tutorial-touch-desc" style="font-size: 0.9rem; line-height: 1.5; color: #3b5b48;">
               • Drag horizontally across the water to guide the rudder.<br>
               • On mobile, use the floating thumb joystick on the left.
             </p>
           </div>
           <div style="background: rgba(254, 243, 199, 0.5); border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;">
-            <p style="margin-bottom: 6px; font-weight: 700; color: #b91c1c;">💎 Goal of the River:</p>
-            <p style="font-size: 0.88rem; line-height: 1.5; color: #78350f;">
+            <p id="txt-tutorial-goal-hdr" style="margin-bottom: 6px; font-weight: 700; color: #b91c1c;">💎 Goal of the River:</p>
+            <p id="txt-tutorial-goal-desc" style="font-size: 0.88rem; line-height: 1.5; color: #78350f;">
               Collect shimmering red gems along the currents to earn 3 stars. Pass lantern checkpoints and glide through the finish arch!
             </p>
           </div>
@@ -225,7 +274,7 @@ export class UIManager {
           </p>
 
           <!-- Developer Support in About -->
-          <div style="background: #fdf6ec; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #ebd5b3; text-align: center;">
+          <div style="background: #fdf6ec; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid #ebd5b3; text-align: center;">
             <p style="font-weight: 700; color: #854d0e; margin-bottom: 8px; font-size: 0.9rem;">💖 Dukung Pengembang:</p>
             <div style="display: flex; gap: 8px; justify-content: center;">
               <button id="btn-about-qris" class="cozy-btn secondary donate-qris-btn" style="flex: 1; padding: 7px 10px; font-size: 0.82rem;">📱 QRIS</button>
@@ -233,16 +282,51 @@ export class UIManager {
             </div>
           </div>
 
+          <!-- Studio Social & Web Links in About -->
+          <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 14px; font-size: 0.82rem;">
+            <a href="https://instagram.com/catbox.studios" target="_blank" rel="noopener noreferrer" style="color: #2e6040; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; flex-shrink: 0; border-radius: 4px;">
+                <defs>
+                  <linearGradient id="ig-grad-about" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#fdf497" />
+                    <stop offset="5%" stop-color="#fdf497" />
+                    <stop offset="45%" stop-color="#fd5949" />
+                    <stop offset="60%" stop-color="#d6249f" />
+                    <stop offset="90%" stop-color="#285AEB" />
+                  </linearGradient>
+                </defs>
+                <rect x="2" y="2" width="20" height="20" rx="5.5" fill="url(#ig-grad-about)" />
+                <rect x="5.5" y="5.5" width="13" height="13" rx="3.5" stroke="#ffffff" stroke-width="1.8" />
+                <circle cx="12" cy="12" r="3.2" stroke="#ffffff" stroke-width="1.8" />
+                <circle cx="16.3" cy="7.7" r="0.85" fill="#ffffff" />
+              </svg>
+              <span>catbox.studios</span>
+            </a>
+            <span style="color: #9cb8a5;">•</span>
+            <a href="https://catbox.axeonsoft.com/" target="_blank" rel="noopener noreferrer" style="color: #2e6040; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+              <span>🌐</span> catbox.axeonsoft.com
+            </a>
+          </div>
+
           <button id="btn-close-about" class="cozy-btn">Close</button>
         </div>
 
         <!-- 3. GAME & AUDIO SETTINGS CARD -->
         <div id="modal-card-settings" class="paper-card modal-card hidden" style="width: 400px; max-width: 92%;">
-          <h2 style="color: #2b583f; margin-bottom: 12px;">Game Settings ⚙️</h2>
+          <h2 id="txt-settings-title" style="color: #2b583f; margin-bottom: 12px;">Game Settings ⚙️</h2>
+
+          <!-- LANGUAGE SELECTION ROW -->
+          <div style="margin-bottom: 14px; text-align: left;">
+            <label id="lbl-settings-lang" style="font-weight: 700; font-size: 0.85rem; color: #2b583f;">Language / Bahasa:</label>
+            <div class="quality-btn-group" style="margin-top: 6px;">
+              <button id="btn-lang-en" class="quality-btn">🇬🇧 English</button>
+              <button id="btn-lang-id" class="quality-btn">🇮🇩 Bahasa Indonesia</button>
+            </div>
+          </div>
           
           <!-- GRAPHICS QUALITY PROFILE -->
           <div style="margin-bottom: 14px; text-align: left;">
-            <label style="font-weight: 700; font-size: 0.85rem; color: #2b583f;">Visual Quality Profile:</label>
+            <label id="lbl-settings-quality" style="font-weight: 700; font-size: 0.85rem; color: #2b583f;">Visual Quality Profile:</label>
             <div class="quality-btn-group">
               <button id="btn-quality-perf" class="quality-btn" title="Lower GPU/battery usage for mobile">⚡ Performance</button>
               <button id="btn-quality-bal" class="quality-btn active" title="Balanced quality & smoothness">🌿 Balanced</button>
@@ -251,25 +335,25 @@ export class UIManager {
           </div>
 
           <div class="slider-group">
-            <label for="slider-master">Master Volume:</label>
+            <label id="lbl-slider-master" for="slider-master">Master Volume:</label>
             <input type="range" id="slider-master" min="0" max="1" step="0.05" value="0.8">
             <span id="val-master" class="slider-val-badge">80%</span>
           </div>
 
           <div class="slider-group">
-            <label for="slider-music">Music Volume:</label>
+            <label id="lbl-slider-music" for="slider-music">Music Volume:</label>
             <input type="range" id="slider-music" min="0" max="1" step="0.05" value="0.65">
             <span id="val-music" class="slider-val-badge">65%</span>
           </div>
 
           <div class="slider-group">
-            <label for="slider-ambient">River & Nature:</label>
+            <label id="lbl-slider-ambient" for="slider-ambient">River & Nature:</label>
             <input type="range" id="slider-ambient" min="0" max="1" step="0.05" value="0.75">
             <span id="val-ambient" class="slider-val-badge">75%</span>
           </div>
 
           <div class="slider-group">
-            <label for="slider-sfx">Sound Effects:</label>
+            <label id="lbl-slider-sfx" for="slider-sfx">Sound Effects:</label>
             <input type="range" id="slider-sfx" min="0" max="1" step="0.05" value="0.8">
             <span id="val-sfx" class="slider-val-badge">80%</span>
           </div>
@@ -290,7 +374,7 @@ export class UIManager {
 
         <!-- 4. PAUSE CARD -->
         <div id="modal-card-pause" class="paper-card modal-card hidden" style="width: 340px;">
-          <h2 style="margin-bottom: 4px; color: #2b583f;">Drifting at Rest ⏸️</h2>
+          <h2 id="pause-title" style="margin-bottom: 4px; color: #2b583f;">Drifting at Rest ⏸️</h2>
           <p id="pause-level-info" style="font-size: 0.85rem; color: #6a8870; margin-bottom: 16px;">Level 01 — Morning Creek</p>
           <div class="btn-stack" style="width: 100%;">
             <button id="btn-resume" class="cozy-btn">Resume Drift ⛵</button>
@@ -302,7 +386,7 @@ export class UIManager {
 
         <!-- 5. LEVEL COMPLETE CARD -->
         <div id="modal-card-level-complete" class="paper-card modal-card hidden" style="width: 380px;">
-          <h2 style="font-size: 1.7rem; color: #2b583f; margin-bottom: 2px;">Journey Completed! 💎</h2>
+          <h2 id="result-title" style="font-size: 1.7rem; color: #2b583f; margin-bottom: 2px;">Journey Completed! 💎</h2>
           <p id="result-rating-title" style="color: #6c8c72; font-size: 0.95rem; font-family: 'Yomogi', cursive;">
             You arrived safely at the harbor
           </p>
@@ -319,8 +403,8 @@ export class UIManager {
 
         <!-- 6. GAME OVER CARD -->
         <div id="modal-card-game-over" class="paper-card modal-card hidden" style="width: 350px;">
-          <h2 style="font-size: 1.5rem; color: #b91c1c; margin-bottom: 6px;">Origami Unfolded 🍃</h2>
-          <p style="color: #6c8c72; font-size: 0.95rem; margin-bottom: 18px;">
+          <h2 id="gameover-title" style="font-size: 1.5rem; color: #b91c1c; margin-bottom: 6px;">Origami Unfolded 🍃</h2>
+          <p id="gameover-subtitle" style="color: #6c8c72; font-size: 0.95rem; margin-bottom: 18px;">
             The paper boat took on gentle water.<br>Every peaceful river has calm shores.
           </p>
           <div class="btn-stack" style="width: 100%;">
@@ -348,17 +432,14 @@ export class UIManager {
 
         <!-- 8. QRIS DONATION MODAL CARD -->
         <div id="modal-card-qris" class="paper-card modal-card hidden" style="width: 360px; max-width: 92%; text-align: center;">
-          <h2 style="color: #2b583f; margin-bottom: 4px;">Dukung Pengembang 💖</h2>
-          <p style="font-size: 0.85rem; color: #5a7d66; margin-bottom: 12px;">Scan kode QRIS di bawah ini dengan aplikasi mobile banking atau e-wallet Anda.</p>
+          <h2 id="txt-qris-title" style="color: #2b583f; margin-bottom: 4px;">Dukung Pengembang 💖</h2>
+          <p id="txt-qris-desc" style="font-size: 0.85rem; color: #5a7d66; margin-bottom: 12px;">Scan kode QRIS di bawah ini dengan aplikasi mobile banking atau e-wallet Anda.</p>
           <div class="qris-img-container" style="background: #ffffff; padding: 10px; border-radius: 14px; border: 2px solid #d4c5ae; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 14px;">
             <img src="qris-catbox.jpeg" alt="QRIS Catbox Donasi" style="width: 100%; max-width: 270px; height: auto; border-radius: 8px; display: block; margin: 0 auto;" />
           </div>
           <div class="btn-stack" style="width: 100%; gap: 8px;">
-            <a href="qris-catbox.jpeg" download="qris-catbox.jpeg" class="cozy-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <a id="btn-download-qris" href="qris-catbox.jpeg" download="qris-catbox.jpeg" class="cozy-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
               <span>📥</span> Unduh QR Code
-            </a>
-            <a href="https://paypal.me/hanafidesar" target="_blank" rel="noopener noreferrer" class="cozy-btn secondary donate-paypal-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <span>🅿️</span> Buka PayPal (hanafidesar)
             </a>
             <button id="btn-close-qris" class="cozy-btn secondary" style="width: 100%;">Tutup</button>
           </div>
@@ -384,6 +465,7 @@ export class UIManager {
     this.modalCardGameOver = document.getElementById('modal-card-game-over')!;
     this.modalCardInstall = document.getElementById('modal-card-install')!;
     this.modalCardQRIS = document.getElementById('modal-card-qris')!;
+    this.modalCardLanguage = document.getElementById('modal-card-language')!;
 
     // Grab HUD elements
     this.hudLevelTitle = document.getElementById('hud-title')!;
@@ -404,7 +486,7 @@ export class UIManager {
     this.mapTotalCollectiblesEl = document.getElementById('map-total-collectibles')!;
 
     this.bindEvents();
-    this.updateMainMenuButtonText();
+    this.applyLanguage(ProgressionManager.getLanguage());
   }
 
   // ==========================================
@@ -453,6 +535,9 @@ export class UIManager {
       case 'DONATE_QRIS':
         this.modalCardQRIS.classList.remove('hidden');
         break;
+      case 'LANGUAGE_SELECT':
+        this.modalCardLanguage.classList.remove('hidden');
+        break;
     }
 
     // 3. Unhide the single centralized modal backdrop
@@ -480,6 +565,7 @@ export class UIManager {
     this.modalCardGameOver.classList.add('hidden');
     this.modalCardInstall.classList.add('hidden');
     this.modalCardQRIS.classList.add('hidden');
+    if (this.modalCardLanguage) this.modalCardLanguage.classList.add('hidden');
   }
 
   public getActiveModal(): ModalType {
@@ -511,6 +597,14 @@ export class UIManager {
 
     const currentQuality = ProgressionManager.getGraphicsQuality();
     this.highlightQualityButton(currentQuality);
+
+    const currentLang = ProgressionManager.getLanguage();
+    const langEnBtn = document.getElementById('btn-lang-en');
+    const langIdBtn = document.getElementById('btn-lang-id');
+    if (langEnBtn && langIdBtn) {
+      langEnBtn.classList.toggle('active', currentLang === 'en');
+      langIdBtn.classList.toggle('active', currentLang === 'id');
+    }
   }
 
   public highlightQualityButton(quality: 'performance' | 'balanced' | 'quality'): void {
@@ -572,15 +666,6 @@ export class UIManager {
       if (this.onBackToMenu) this.onBackToMenu();
     });
 
-    // Map scroll arrows
-    clickWithAudio('btn-map-left', () => {
-      this.mapScrollViewport.scrollBy({ left: -260, behavior: 'smooth' });
-    });
-
-    clickWithAudio('btn-map-right', () => {
-      this.mapScrollViewport.scrollBy({ left: 260, behavior: 'smooth' });
-    });
-
     // Main Menu: How to Sail
     clickWithAudio('btn-how', () => {
       this.openModal('TUTORIAL', 'MAIN_MENU');
@@ -629,6 +714,30 @@ export class UIManager {
     bindSlider('slider-ambient', 'val-ambient');
     bindSlider('slider-sfx', 'val-sfx');
 
+    // First-Time Language Selection buttons
+    clickWithAudio('btn-choose-id', () => {
+      ProgressionManager.setLanguage('id');
+      this.applyLanguage('id');
+      this.closeModal();
+    });
+
+    clickWithAudio('btn-choose-en', () => {
+      ProgressionManager.setLanguage('en');
+      this.applyLanguage('en');
+      this.closeModal();
+    });
+
+    // Language buttons in Settings Modal
+    clickWithAudio('btn-lang-en', () => {
+      ProgressionManager.setLanguage('en');
+      this.applyLanguage('en');
+    });
+
+    clickWithAudio('btn-lang-id', () => {
+      ProgressionManager.setLanguage('id');
+      this.applyLanguage('id');
+    });
+
     // Settings: Toggle Mute
     clickWithAudio('btn-toggle-mute', () => {
       const muted = this.audio.toggleMute();
@@ -640,7 +749,9 @@ export class UIManager {
 
     // Settings: Reset Progress
     clickWithAudio('btn-reset-progress', () => {
-      if (window.confirm('Reset all river journeys and return to Level 1?')) {
+      const lang = ProgressionManager.getLanguage();
+      const confirmMsg = UI_TRANSLATIONS[lang]?.resetConfirm || 'Reset all river journeys and return to Level 1?';
+      if (window.confirm(confirmMsg)) {
         ProgressionManager.resetAllProgress();
         this.updateMainMenuButtonText();
         this.showLevelSelection(false);
@@ -651,7 +762,10 @@ export class UIManager {
     // Settings: Close
     clickWithAudio('btn-close-settings', () => {
       this.applySettingsFromSliders();
-      this.closeModal();
+      const returnState = this.closeModal();
+      if ((returnState === 'PAUSED' || returnState === 'PLAYING' || this.isHUDVisible()) && this.onResumeGame) {
+        this.onResumeGame();
+      }
     });
 
     // Fullscreen buttons
@@ -778,13 +892,13 @@ export class UIManager {
       if (this.onExitToLevelSelect) this.onExitToLevelSelect();
     });
 
-    // Global keyboard map navigation (Left / Right arrows in level select)
+    // Global keyboard map navigation in level select
     window.addEventListener('keydown', (e: KeyboardEvent) => {
       if (!this.levelSelectEl.classList.contains('hidden') && this.activeModal === 'NONE') {
-        if (e.key === 'ArrowRight') {
-          this.mapScrollViewport.scrollBy({ left: 200, behavior: 'smooth' });
-        } else if (e.key === 'ArrowLeft') {
-          this.mapScrollViewport.scrollBy({ left: -200, behavior: 'smooth' });
+        if (e.key === 'ArrowDown') {
+          this.mapScrollViewport.scrollBy({ top: 180, behavior: 'smooth' });
+        } else if (e.key === 'ArrowUp') {
+          this.mapScrollViewport.scrollBy({ top: -180, behavior: 'smooth' });
         } else if (e.key === 'Escape') {
           this.showMainMenu();
           if (this.onBackToMenu) this.onBackToMenu();
@@ -881,6 +995,9 @@ export class UIManager {
     const playBtn = document.getElementById('btn-play');
     if (!playBtn) return;
 
+    const lang = ProgressionManager.getLanguage();
+    const t = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS.en;
+
     let highestUnlocked = 1;
     let anyCompleted = false;
     for (let i = 1; i <= 10; i++) {
@@ -890,10 +1007,11 @@ export class UIManager {
     }
 
     if (!anyCompleted && highestUnlocked === 1) {
-      playBtn.textContent = 'Start Journey';
+      playBtn.textContent = t.startJourney;
     } else {
-      const title = LEVEL_DATA[highestUnlocked]?.title || `Level ${highestUnlocked}`;
-      playBtn.textContent = `Continue (0${highestUnlocked}: ${title})`;
+      const loc = getLocalizedLevel(highestUnlocked, lang);
+      const numStr = `0${highestUnlocked}`;
+      playBtn.textContent = t.continueJourney(numStr, loc.title);
     }
   }
 
@@ -927,12 +1045,16 @@ export class UIManager {
     const track = document.getElementById('level-grid-container')!;
     track.innerHTML = '';
 
+    const lang = ProgressionManager.getLanguage();
+    const t = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS.en;
+
     let totalStars = 0;
     let totalCollectibles = 0;
     let latestUnlockedElement: HTMLElement | null = null;
 
     for (let id = 1; id <= 10; id++) {
       const cfg = LEVEL_DATA[id];
+      const loc = getLocalizedLevel(id, lang);
       const record = ProgressionManager.getLevelRecord(id);
       const isUnlocked = ProgressionManager.isLevelUnlocked(id);
       const isCompleted = record.completed;
@@ -954,13 +1076,13 @@ export class UIManager {
 
       card.innerHTML = `
         <div class="realm-icon-badge">${isUnlocked ? icon : '🔒'}</div>
-        <div class="realm-number">REALM 0${id}</div>
-        <div class="realm-title">${cfg.title}</div>
-        <div class="realm-subtitle">${cfg.subtitle}</div>
-        <div class="realm-stars">${isUnlocked ? starDisplay : 'Locked'}</div>
-        <div class="realm-collectible">${isUnlocked ? `💎 ${record.bestCollectibles} / ${cfg.collectibles.length}` : `Requires Level ${id - 1}`}</div>
+        <div class="realm-number">${t.realmPrefix} 0${id}</div>
+        <div class="realm-title">${loc.title}</div>
+        <div class="realm-subtitle">${loc.subtitle}</div>
+        <div class="realm-stars">${isUnlocked ? starDisplay : t.locked}</div>
+        <div class="realm-collectible">${isUnlocked ? `💎 ${record.bestCollectibles} / ${cfg.collectibles.length}` : t.requiresLevel(id - 1)}</div>
         <button class="realm-action-btn">
-          ${isUnlocked ? (isCompleted ? 'Replay ↺' : 'Sail River ⛵') : 'Locked 🔒'}
+          ${isUnlocked ? (isCompleted ? t.replay : t.sailRiver) : t.locked}
         </button>
       `;
 
@@ -1037,6 +1159,10 @@ export class UIManager {
     this.hudEl.style.display = 'none';
   }
 
+  public isHUDVisible(): boolean {
+    return !!(this.hudEl && !this.hudEl.classList.contains('hidden') && this.hudEl.style.display !== 'none');
+  }
+
   public updateIntegrity(current: number, max: number): void {
     let str = '';
     for (let i = 1; i <= max; i++) {
@@ -1053,8 +1179,10 @@ export class UIManager {
     }
   }
 
-  public showCheckpointBanner(text: string = '🏮 Lantern Checkpoint Reached'): void {
-    this.hudCheckpointBannerEl.textContent = text;
+  public showCheckpointBanner(text?: string): void {
+    const lang = ProgressionManager.getLanguage();
+    const t = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS.en;
+    this.hudCheckpointBannerEl.textContent = text || t.checkpointReached;
     this.hudCheckpointBannerEl.classList.add('show');
 
     if (this.bannerTimeout) clearTimeout(this.bannerTimeout);
@@ -1080,21 +1208,24 @@ export class UIManager {
   }
 
   public showResultModal(stars: number, collected: number, total: number, hasNextLevel: boolean): void {
+    const lang = ProgressionManager.getLanguage();
+    const t = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS.en;
+
     let starsStr = '';
     for (let i = 1; i <= 3; i++) {
       starsStr += i <= stars ? '⭐' : '✩';
     }
     this.resultStarsEl.textContent = starsStr;
-    this.resultScoreEl.textContent = `Red Gems: ${collected} / ${total}`;
+    this.resultScoreEl.textContent = `${t.completeGems} ${collected} / ${total}`;
 
     const ratingEl = document.getElementById('result-rating-title');
     if (ratingEl) {
       if (stars === 3) {
-        ratingEl.textContent = 'Master Explorer! Pristine journey 💎';
+        ratingEl.textContent = lang === 'id' ? 'Penjelajah Sejati! Perjalanan sempurna 💎' : 'Master Explorer! Pristine journey 💎';
       } else if (stars === 2) {
-        ratingEl.textContent = 'Skilled Navigator! Beautiful drift 🍃';
+        ratingEl.textContent = lang === 'id' ? 'Nahkoda Terampil! Arungan yang indah 🍃' : 'Skilled Navigator! Beautiful drift 🍃';
       } else {
-        ratingEl.textContent = 'Safe Passage! Peaceful arrival ⛵';
+        ratingEl.textContent = lang === 'id' ? 'Pelayaran Aman! Tiba dengan damai ⛵' : 'Safe Passage! Peaceful arrival ⛵';
       }
     }
 
@@ -1110,5 +1241,156 @@ export class UIManager {
 
   public showGameOverModal(): void {
     this.openModal('GAME_OVER', 'PLAYING');
+  }
+
+  public applyLanguage(lang: Language): void {
+    const t = UI_TRANSLATIONS[lang];
+    if (!t) return;
+
+    // Main Menu
+    const gameTitleEl = document.getElementById('game-title');
+    if (gameTitleEl) gameTitleEl.textContent = t.gameTitle;
+    const gameTaglineEl = document.getElementById('game-tagline');
+    if (gameTaglineEl) gameTaglineEl.textContent = t.gameTagline;
+    const levelsBtn = document.getElementById('btn-levels');
+    if (levelsBtn) levelsBtn.textContent = t.riverMap;
+    const settingsBtn = document.getElementById('btn-settings');
+    if (settingsBtn) settingsBtn.textContent = t.gameSettings;
+    const donateTitleEl = document.getElementById('lbl-donate-title');
+    if (donateTitleEl) donateTitleEl.textContent = t.donateHeader;
+    const qrisBtn = document.getElementById('btn-donate-qris');
+    if (qrisBtn) qrisBtn.textContent = t.qrisDonate;
+    const paypalBtn = document.getElementById('btn-donate-paypal');
+    if (paypalBtn) paypalBtn.textContent = t.paypal;
+    const menuFooter = document.getElementById('txt-menu-footer');
+    if (menuFooter) menuFooter.textContent = t.footerNote;
+
+    // First-Time Language Modal
+    const langModalTitle = document.getElementById('txt-lang-title');
+    if (langModalTitle) langModalTitle.textContent = t.langModalTitle;
+    const langModalDesc = document.getElementById('txt-lang-desc');
+    if (langModalDesc) langModalDesc.innerHTML = t.langModalDesc;
+
+    // River Map Header
+    const backBtn = document.getElementById('btn-back-menu');
+    if (backBtn) backBtn.textContent = t.backMenu;
+    const mapTitleEl = document.getElementById('map-title');
+    if (mapTitleEl) mapTitleEl.textContent = t.mapTitle;
+    const mapSubtitleEl = document.getElementById('map-subtitle');
+    if (mapSubtitleEl) mapSubtitleEl.textContent = t.mapSubtitle;
+
+    // HUD
+    const hintEl = document.getElementById('hud-touch-hint');
+    if (hintEl) hintEl.textContent = t.touchHint;
+    const pauseBtn = document.getElementById('btn-pause');
+    if (pauseBtn) pauseBtn.title = t.pauseTooltip;
+
+    // Pause Modal
+    const pauseTitle = document.getElementById('pause-title');
+    if (pauseTitle) pauseTitle.textContent = t.pauseTitle;
+    const resumeBtn = document.getElementById('btn-resume');
+    if (resumeBtn) resumeBtn.textContent = t.resumeDrift;
+    const restartBtn = document.getElementById('btn-restart');
+    if (restartBtn) restartBtn.textContent = t.restartLevel;
+    const pauseSettingsBtn = document.getElementById('btn-pause-settings');
+    if (pauseSettingsBtn) pauseSettingsBtn.textContent = t.gameSettings;
+    const pauseLevelsBtn = document.getElementById('btn-pause-levels');
+    if (pauseLevelsBtn) pauseLevelsBtn.textContent = t.riverMap;
+
+    // Level Complete Modal
+    const resultTitle = document.getElementById('result-title');
+    if (resultTitle) resultTitle.textContent = t.completeTitle;
+    const resultRating = document.getElementById('result-rating-title');
+    if (resultRating) resultRating.textContent = t.completeSubtitle;
+    const nextBtn = document.getElementById('btn-next-level');
+    if (nextBtn) nextBtn.textContent = t.nextJourney;
+    const replayBtn = document.getElementById('btn-replay');
+    if (replayBtn) replayBtn.textContent = t.sailAgain;
+    const resultLevelsBtn = document.getElementById('btn-result-levels');
+    if (resultLevelsBtn) resultLevelsBtn.textContent = t.riverMap;
+
+    // Game Over Modal
+    const gameOverTitle = document.getElementById('gameover-title');
+    if (gameOverTitle) gameOverTitle.textContent = t.gameOverTitle;
+    const gameOverSubtitle = document.getElementById('gameover-subtitle');
+    if (gameOverSubtitle) gameOverSubtitle.textContent = t.gameOverSubtitle;
+    const respawnBtn = document.getElementById('btn-gameover-respawn');
+    if (respawnBtn) respawnBtn.textContent = t.respawnLantern;
+    const goRestartBtn = document.getElementById('btn-gameover-restart');
+    if (goRestartBtn) goRestartBtn.textContent = t.restartLevel;
+    const goLevelsBtn = document.getElementById('btn-gameover-levels');
+    if (goLevelsBtn) goLevelsBtn.textContent = t.riverMap;
+
+    // Settings Modal
+    const settingsTitle = document.getElementById('txt-settings-title');
+    if (settingsTitle) settingsTitle.textContent = t.settingsTitle;
+    const langLbl = document.getElementById('lbl-settings-lang');
+    if (langLbl) langLbl.textContent = t.languageLabel;
+    const qualityLbl = document.getElementById('lbl-settings-quality');
+    if (qualityLbl) qualityLbl.textContent = t.qualityLabel;
+    const perfBtn = document.getElementById('btn-quality-perf');
+    if (perfBtn) perfBtn.textContent = t.qualityPerf;
+    const balBtn = document.getElementById('btn-quality-bal');
+    if (balBtn) balBtn.textContent = t.qualityBal;
+    const highBtn = document.getElementById('btn-quality-high');
+    if (highBtn) highBtn.textContent = t.qualityHigh;
+    const masterLbl = document.getElementById('lbl-slider-master');
+    if (masterLbl) masterLbl.textContent = t.masterVolume;
+    const musicLbl = document.getElementById('lbl-slider-music');
+    if (musicLbl) musicLbl.textContent = t.musicVolume;
+    const ambLbl = document.getElementById('lbl-slider-ambient');
+    if (ambLbl) ambLbl.textContent = t.ambientVolume;
+    const sfxLbl = document.getElementById('lbl-slider-sfx');
+    if (sfxLbl) sfxLbl.textContent = t.sfxVolume;
+    const muteBtn = document.getElementById('btn-toggle-mute');
+    if (muteBtn) {
+      muteBtn.textContent = this.audio.isSoundMuted() ? t.soundOff : t.soundOn;
+    }
+    const resetBtn = document.getElementById('btn-reset-progress');
+    if (resetBtn) resetBtn.textContent = t.resetProgress;
+    const closeSettingsBtn = document.getElementById('btn-close-settings');
+    if (closeSettingsBtn) closeSettingsBtn.textContent = t.saveClose;
+
+    // Settings Language buttons state
+    const langEnBtn = document.getElementById('btn-lang-en');
+    const langIdBtn = document.getElementById('btn-lang-id');
+    if (langEnBtn && langIdBtn) {
+      langEnBtn.classList.toggle('active', lang === 'en');
+      langIdBtn.classList.toggle('active', lang === 'id');
+    }
+
+    // Tutorial Modal
+    const tutTitle = document.getElementById('txt-tutorial-title');
+    if (tutTitle) tutTitle.textContent = t.tutorialTitle;
+    const tutKbHdr = document.getElementById('txt-tutorial-kb-hdr');
+    if (tutKbHdr) tutKbHdr.innerHTML = t.steeringHeader;
+    const tutKbDesc = document.getElementById('txt-tutorial-kb-desc');
+    if (tutKbDesc) tutKbDesc.innerHTML = t.steeringDescDesktop;
+    const tutTouchHdr = document.getElementById('txt-tutorial-touch-hdr');
+    if (tutTouchHdr) tutTouchHdr.innerHTML = t.currentsHeader;
+    const tutTouchDesc = document.getElementById('txt-tutorial-touch-desc');
+    if (tutTouchDesc) tutTouchDesc.innerHTML = t.steeringDescMobile;
+    const tutGoalHdr = document.getElementById('txt-tutorial-goal-hdr');
+    if (tutGoalHdr) tutGoalHdr.innerHTML = t.goalHeader;
+    const tutGoalDesc = document.getElementById('txt-tutorial-goal-desc');
+    if (tutGoalDesc) tutGoalDesc.innerHTML = t.goalDesc;
+    const tutBtn = document.getElementById('btn-tutorial-understood');
+    if (tutBtn) tutBtn.textContent = t.understood;
+
+    // QRIS Modal
+    const qrisTitle = document.getElementById('txt-qris-title');
+    if (qrisTitle) qrisTitle.textContent = t.qrisTitle;
+    const qrisDesc = document.getElementById('txt-qris-desc');
+    if (qrisDesc) qrisDesc.textContent = t.qrisSubtitle;
+    const qrisDlBtn = document.getElementById('btn-download-qris');
+    if (qrisDlBtn) qrisDlBtn.innerHTML = `<span>📥</span> ${t.downloadQr}`;
+    const qrisCloseBtn = document.getElementById('btn-close-qris');
+    if (qrisCloseBtn) qrisCloseBtn.textContent = t.close;
+
+    // Refresh dynamic texts
+    this.updateMainMenuButtonText();
+    if (!this.levelSelectEl.classList.contains('hidden')) {
+      this.showLevelSelection(false);
+    }
   }
 }
